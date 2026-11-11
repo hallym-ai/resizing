@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src http://127.0.0.1:8191 http://127.0.0.1:8179 http://localhost:8179 'self' blob: data: https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; font-src 'self' blob: data:; media-src 'none'; object-src 'none'; base-uri 'none'" />
+<script type="importmap">{"imports": {"./photo-instance-import.mjs":"./photo-instance-import.mjs?v=support-lasso-20261109","./photo-mask-import.mjs":"./photo-mask-import.mjs?v=photo-editable-20261101","./free-ai-design.mjs":"./free-ai-design.mjs?v=compact-ai-help-20261101","./texture-background.mjs": "./texture-background.mjs?v=main-background-20261101", "./background-only.mjs": "./background-only.mjs?v=independent-photo-background-20261110", "./layers.mjs": "./layers.mjs?v=editor-preview-resume-20261110", "./responsive-layout.mjs": "./responsive-layout.mjs?v=editor-preview-resume-20261110", "./background-extractor.mjs": "./background-extractor.mjs?v=main-background-20261101", "./main-raster-background.mjs": "./main-raster-background.mjs?v=main-background-20261101"}}</script>
+<script src="./ui-theme.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- ① 기본 SEO -->
+<title data-i18n="meta_title">이미지 리사이즈 - 무료 온라인 이미지 크기 조절·형식 변환 (PNG/JPG/WebP)</title>
+<meta name="description" data-i18n-attr="content" data-i18n="meta_desc" content="이미지 크기 조절과 PNG·JPG·WebP 형식 변환을 브라우저에서 바로. 비율 고정, 퍼센트 리사이즈, JPG/WebP 품질 조절. 서버 전송 없이 안전하게." />
+<meta name="keywords" content="이미지 리사이즈, 이미지 크기 조절, 사진 크기 줄이기, 이미지 변환, PNG JPG 변환, WebP 변환, 이미지 압축, image resize, image converter, png to jpg, webp converter, resize image online, compress image" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="author" content="리사이징 코엑스 · based on Lena MIT source" />
+<meta name="theme-color" content="#3D6B5E" />
+<!-- hreflang (직접 번역한 언어만) -->
+<!-- favicon: 인라인 SVG (그린 라운드 사각형 + 화살표 글리프) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233D6B5E'/%3E%3Cg fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='8' width='16' height='16' rx='2'/%3E%3Cpath d='M13 13l-3 0 0 3'/%3E%3Cpath d='M19 19l3 0 0-3'/%3E%3C/g%3E%3C/svg%3E" />
+
+<!-- ② OG + Twitter -->
+<meta property="og:type" content="website" />
+<meta property="og:title" data-i18n-attr="content" data-i18n="meta_title" content="이미지 리사이즈 - 무료 온라인 이미지 크기 조절·형식 변환" />
+<meta property="og:description" data-i18n-attr="content" data-i18n="meta_desc" content="이미지 크기 조절과 PNG·JPG·WebP 형식 변환을 브라우저에서 바로. 서버 전송 없이 안전하게." />
+
+<meta property="og:site_name" content="tool-image-resize" />
+<meta property="og:locale" content="ko_KR" />
+<meta property="og:locale:alternate" content="en_US" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" data-i18n-attr="content" data-i18n="meta_title" content="이미지 리사이즈 - 무료 온라인 이미지 크기 조절·형식 변환" />
+<meta name="twitter:description" data-i18n-attr="content" data-i18n="meta_desc" content="이미지 크기 조절과 형식 변환을 브라우저에서 바로." />
+<meta name="twitter:creator" content="@thezenvoid" />
+
+<!-- ③ JSON-LD -->
+
+
+
+<style>
+  :root {
+    --bg: #F7F5F0; --surface: #FFFFFF; --border: #E0DDD6;
+    --text-primary: #1A1814; --text-secondary: #6B6660; --text-muted: #A8A49E;
+    --accent: #3D6B5E; --accent-light: #EBF2EF; --accent-mid: #5A9A8A;
+    --danger: #B4534B; --radius: 14px; --shadow: 0 1px 3px rgba(0,0,0,.05), 0 6px 24px rgba(0,0,0,.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text-primary);
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+    padding: 0 16px;
+  }
+  .wrap { max-width: 856px; margin: 0 auto; padding: 28px 0 64px; }
+
+  /* Header */
+  header.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+  .brand h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.02em; display: flex; align-items: center; gap: 9px; }
+  .brand .logo { width: 34px; height: 34px; flex: 0 0 auto; }
+  .brand p { color: var(--text-secondary); font-size: .92rem; margin-top: 5px; }
+  .lang-toggle { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 3px; flex: 0 0 auto; }
+  .lang-toggle button { border: none; background: none; cursor: pointer; padding: 5px 11px; border-radius: 999px; font-size: .82rem; font-weight: 600; color: var(--text-secondary); font-family: inherit; }
+  .lang-toggle button.active { background: var(--accent); color: #fff; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+
+  /* Dropzone */
+  #dropzone { padding: 56px 24px; text-align: center; cursor: pointer; transition: background .15s, border-color .15s; border: 2px dashed var(--border); border-radius: var(--radius); background: var(--surface); }
+  #dropzone:hover, #dropzone.drag { background: var(--accent-light); border-color: var(--accent-mid); }
+  #dropzone .dz-icon { font-size: 2.6rem; line-height: 1; }
+  #dropzone h2 { font-size: 1.08rem; margin: 14px 0 6px; font-weight: 700; }
+  #dropzone p { color: var(--text-secondary); font-size: .9rem; }
+  #dropzone .dz-hint { color: var(--text-muted); font-size: .82rem; margin-top: 10px; }
+
+  /* Editor */
+  #editor { display: none; }
+  #editor.show { display: block; }
+  .section { padding: 18px 20px; }
+  .section + .section { border-top: 1px solid var(--border); }
+  .section h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 14px; font-weight: 700; }
+
+  /* Original info */
+  .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .meta-item { background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+  .meta-item .k { font-size: .74rem; color: var(--text-muted); }
+  .meta-item .v { font-size: .98rem; font-weight: 700; margin-top: 2px; word-break: break-all; }
+
+  /* Controls */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  label.flabel { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+  .dims { display: flex; align-items: flex-end; gap: 10px; }
+  .dims .col { flex: 1; }
+  .dims .lock { flex: 0 0 auto; padding-bottom: 9px; }
+  input[type="number"], select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 1rem; font-family: inherit; background: var(--surface); color: var(--text-primary);
+  }
+  input[type="number"]:focus, select:focus { outline: none; border-color: var(--accent-mid); box-shadow: 0 0 0 3px var(--accent-light); }
+  .dims .x { padding-bottom: 10px; color: var(--text-muted); font-weight: 700; }
+
+  .lockbtn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: .82rem; color: var(--text-secondary); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 7px 11px; white-space: nowrap; }
+  .lockbtn.on { background: var(--accent-light); border-color: var(--accent-mid); color: var(--accent); font-weight: 600; }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+  .presets button { border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); border-radius: 999px; padding: 6px 13px; font-size: .84rem; cursor: pointer; font-family: inherit; font-weight: 600; }
+  .presets button:hover { border-color: var(--accent-mid); color: var(--accent); }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .row2 { grid-template-columns: 1fr; } .meta-grid { grid-template-columns: 1fr; } }
+
+  .quality-row { display: flex; align-items: center; gap: 12px; }
+  input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .qval { font-weight: 700; min-width: 36px; text-align: right; }
+  #qualityField.hide { display: none; }
+
+  /* Preview */
+  .preview-wrap { text-align: center; }
+  #previewImg { max-width: 100%; max-height: 360px; border-radius: 10px; border: 1px solid var(--border); background: repeating-conic-gradient(#f0eee9 0% 25%, #fff 0% 50%) 50% / 18px 18px; }
+  .result-stats { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; font-size: .9rem; }
+  .result-stats b { color: var(--accent); }
+  .delta-down { color: var(--accent); font-weight: 700; }
+  .delta-up { color: var(--danger); font-weight: 700; }
+
+  /* Buttons */
+  .actions { display: flex; gap: 10px; padding: 18px 20px; border-top: 1px solid var(--border); }
+  .btn { flex: 1; padding: 13px 16px; border-radius: 11px; font-size: 1rem; font-weight: 700; cursor: pointer; border: 1px solid transparent; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #345d52; }
+  .btn-ghost { background: var(--surface); color: var(--text-secondary); border-color: var(--border); flex: 0 0 auto; }
+  .btn-ghost:hover { border-color: var(--accent-mid); color: var(--accent); }
+
+  /* Content (SEO) */
+  .content { margin-top: 38px; }
+  .content section { margin-bottom: 26px; }
+  .content h2 { font-size: 1.12rem; font-weight: 800; margin-bottom: 10px; letter-spacing: -.01em; }
+  .content p { color: var(--text-secondary); font-size: .94rem; margin-bottom: 8px; }
+  details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0 16px; margin-bottom: 8px; }
+  details summary { cursor: pointer; font-weight: 600; padding: 13px 0; list-style: none; position: relative; padding-right: 24px; font-size: .95rem; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after { content: "+"; position: absolute; right: 2px; top: 11px; font-size: 1.3rem; color: var(--text-muted); font-weight: 400; }
+  details[open] summary::after { content: "−"; }
+  details .ans { padding: 0 0 14px; color: var(--text-secondary); font-size: .92rem; }
+
+  /* Footer */
+  footer { margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--border); text-align: center; font-size: .85rem; color: var(--text-muted); }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  footer .hub { display: inline-block; margin-top: 10px; font-weight: 600; }
+  footer .row { margin: 4px 0; }
+
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--accent-mid); outline-offset: 4px; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .notice { padding: 12px 16px; margin: 14px 0; border-radius: 10px; background: var(--accent-light); color: var(--accent); font-size: .9rem; }
+  .notice.error { background: #fff0ed; color: #92372f; }
+  .editor-note { margin: 0; padding: 0 20px 16px; color: var(--text-secondary); font-size: .8rem; }
+  [hidden] { display: none !important; }
+  @media (max-width: 560px) { header.top { flex-wrap: wrap; } .brand p { font-size: .84rem; } .dims { flex-wrap: wrap; } .dims .col { min-width: 95px; } .dims .lock { width: 100%; padding: 0; } #dropzone { padding: 44px 14px; } .actions { padding: 14px; } .brand h1 { font-size: 1.5rem; } }
+
+.document-controls{padding:18px 20px;margin:14px 0;}
+.document-heading,.document-navigation{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.document-heading{justify-content:space-between;margin-bottom:14px;}
+.document-heading strong{overflow-wrap:anywhere;}
+.document-navigation select{width:80px;}
+.document-navigation label{font-size:.9rem;color:var(--text-secondary);}
+.document-controls p{font-size:.82rem;color:var(--text-secondary);margin:12px 0 0;}
+.doc-btn{border:1px solid var(--border);padding:8px 12px;border-radius:8px;background:white;color:var(--accent);cursor:pointer;font:inherit;font-size:.85rem;}
+.doc-btn:disabled{opacity:.4;cursor:default;}
+.document-render-host{position:fixed;left:-24000px;top:0;pointer-events:none;z-index:-1;line-height:normal;}
+
+ .sns-helper{color:var(--text-secondary);font-size:.84rem;line-height:1.7;margin:8px 0 12px;}
+ .sns-search-row{display:grid;grid-template-columns:1fr 1.5fr;gap:12px;}
+ input[type="search"],input[type="text"]{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:white;color:var(--text-primary);font:inherit;min-width:0;}
+ .sns-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:12px 0;font-size:.8rem;color:var(--text-secondary);}
+ .sns-toolbar h3{margin:0;}
+ .sns-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-height:340px;overflow:auto;padding:4px 4px 8px;}
+ .sns-preset-card{border:1px solid var(--border);border-radius:11px;padding:12px;background:var(--bg);min-width:0;}
+ .sns-preset-card.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--accent-light);}
+ .sns-preset-apply{display:flex;flex-direction:column;gap:5px;border:0;background:transparent;padding:0 0 8px;text-align:left;width:100%;cursor:pointer;font:inherit;color:inherit;}
+ .sns-platform-name{font-size:.72rem;color:var(--accent);font-weight:700;}
+ .sns-preset-apply strong{font-size:.87rem;line-height:1.45;}
+ .sns-dimension{font-size:.82rem;font-variant-numeric:tabular-nums;}
+ .sns-basis{font-size:.69rem;color:var(--text-secondary);}
+ .sns-add{padding:5px 9px;}.sns-delete{border:0;background:none;color:var(--danger);font:inherit;font-size:.78rem;cursor:pointer;padding:5px 8px;}
+ #snsActiveInfo{border-left:3px solid var(--accent-mid);padding:8px 12px;background:var(--accent-light);border-radius:0 7px 7px 0;}
+ #snsActiveInfo p{margin:5px 0;font-size:.8rem;}#snsActiveInfo a,.sns-sources a{color:var(--accent);}
+ .sns-custom-row{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:8px;}.sns-custom-row>div{flex:1;min-width:160px;}
+ .sns-bg-row{display:flex;gap:12px;align-items:center;min-height:44px;}.sns-bg-row label{font-size:.8rem;display:flex;align-items:center;gap:6px;}
+ input[type="color"]{width:46px;height:40px;border:1px solid var(--border);border-radius:8px;padding:3px;background:white;}
+ #positionControls{margin-top:16px;}#positionControls input[type="range"]{width:100%;}
+ #batchList{padding-left:22px;margin:10px 0 18px;}#batchList li{font-size:.84rem;margin-bottom:6px;overflow-wrap:anywhere;}#batchList li button{margin-left:8px;}
+ .sns-batch-buttons{display:flex;gap:8px;flex-wrap:wrap;}.sns-batch-buttons .btn{font-size:.9rem;}
+ .sns-output-warning{font-size:.82rem;color:var(--danger);margin:10px 0;}.sns-output-warning:empty{display:none;}
+ .sns-sources{margin-top:24px;}.sns-sources ul{padding:0 10px 16px 20px;max-height:340px;overflow:auto;}.sns-sources li{font-size:.8rem;margin:10px 0;}.sns-sources p{margin-top:4px;}
+ @media(max-width:680px){.sns-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.sns-search-row{grid-template-columns:1fr;}}
+ @media(max-width:380px){.sns-grid{grid-template-columns:1fr;}}
+</style>
+<link rel="stylesheet" href="./layers.css">
+<link rel="stylesheet" href="./auto-layers.css">
+<link rel="stylesheet" href="./responsive-layout.css">
+<link rel="stylesheet" href="./workspace-controls.css">
+<link rel="stylesheet" href="./design-candidates.css">
+<link rel="stylesheet" href="./free-ai-design.css">
+<link rel="stylesheet" href="./ui-theme.css">
+</head>
+<body>
+<div role="status" style="padding:12px 18px;background:#fff4d6;color:#392800;font:14px sans-serif;text-align:center">공개 시험판: AI 요소 분리·배경 생성 및 로컬 AI 기능은 연결 준비 중입니다. 일부 자동 인식 기능도 사용할 수 없습니다.</div>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>
+        <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#3D6B5E"/><g fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="16" height="16" rx="2"/><path d="M13 13l-3 0 0 3"/><path d="M19 19l3 0 0-3"/></g></svg>
+        <span data-i18n="title">이미지 리사이즈</span>
+      </h1>
+      <p data-i18n="subtitle">이미지 크기 조절 + PNG · JPG · WebP 형식 변환. 서버 전송 없이 브라우저에서.</p>
+    </div>
+    <div class="lang-toggle" role="group" aria-label="Language">
+      <button type="button" data-lang="ko">한국어</button>
+      <button type="button" data-lang="en">EN</button>
+    </div>
+  </header>
+  <p><a class="doc-btn" href="./background.html?v=background-extract-20261101">배경만 만들기 · 글씨·상품 제외</a></p>
+
+  <main>
+    <!-- Upload -->
+    <div id="dropzone" tabindex="0" role="button" aria-label="이미지 선택 / Choose image">
+      <div class="dz-icon">🖼️</div>
+      <h2 data-i18n="dz_title">이미지를 끌어다 놓거나 클릭해서 선택</h2>
+      <p data-i18n="dz_sub">PNG · JPG · WebP · GIF · BMP 지원</p>
+      <p class="dz-hint" data-i18n="dz_hint">클립보드에서 붙여넣기(Ctrl/⌘+V)도 됩니다</p>
+      <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,.png,.jpg,.jpeg,.webp,.gif,.bmp,.pdf,.pptx,.ppt" hidden />
+    </div>
+
+    <!-- Editor -->
+    <p id="status" class="notice" role="status" aria-live="polite" hidden></p>
+    <section id="documentControls" class="card document-controls" hidden>
+  <div class="document-heading"><strong id="documentName"></strong><button type="button" class="doc-btn" id="documentChange" data-i18n="doc_change">파일 바꾸기</button></div>
+  <div class="document-navigation"><label for="pageSelect" data-i18n="doc_page">페이지 / 슬라이드</label><button type="button" class="doc-btn" id="pagePrev" data-i18n="doc_prev">이전</button><select id="pageSelect" aria-label="페이지 / 슬라이드"></select><span id="documentCount" aria-live="polite"></span><button type="button" class="doc-btn" id="pageNext" data-i18n="doc_next">다음</button></div>
+  <p data-i18n="doc_notice"></p>
+</section>
+<div id="editor" class="card">
+      <!-- 원본 정보 -->
+      <div class="section">
+        <h3 data-i18n="sec_original">원본 정보</h3>
+        <div class="meta-grid">
+          <div class="meta-item"><div class="k" data-i18n="m_dimensions">크기</div><div class="v" id="origDims">—</div></div>
+          <div class="meta-item"><div class="k" data-i18n="m_filesize">파일 크기</div><div class="v" id="origSize">—</div></div>
+          <div class="meta-item"><div class="k" data-i18n="m_format">형식</div><div class="v" id="origFormat">—</div></div>
+        </div>
+      </div>
+
+<section class="section" id="snsSection">
+ <h3 data-i18n="sns_title">SNS 규격 또는 자유 크기</h3><p class="sns-helper" data-i18n="sns_intro"></p>
+ <div class="sns-search-row"><div><label class="flabel" for="snsPlatform" data-i18n="sns_platform"></label><select id="snsPlatform"><option value="">전체 플랫폼</option></select></div><div><label class="flabel" for="snsSearch" data-i18n="sns_search"></label><input type="search" id="snsSearch" maxlength="100" autocomplete="off"></div></div>
+ <div class="sns-toolbar"><span id="snsCount" aria-live="polite"></span><button type="button" class="doc-btn" id="freeSizeBtn" data-i18n="sns_free"></button></div>
+ <div id="snsGrid" class="sns-grid" aria-label="SNS 규격 목록"></div><div id="snsActiveInfo" class="sns-helper" aria-live="polite"></div>
+ </section>
+      <!-- 리사이즈 옵션 -->
+      <div class="section" id="outputSizeControls">
+        <h3 data-i18n="sec_resize">출력 규격</h3>
+        <div class="field">
+          <div class="dims">
+            <div class="col">
+              <label class="flabel" for="wInput" data-i18n="f_width">너비 (px)</label>
+              <input type="number" id="wInput" min="1" max="12000" step="1" inputmode="numeric" />
+            </div>
+            <div class="x">×</div>
+            <div class="col">
+              <label class="flabel" for="hInput" data-i18n="f_height">높이 (px)</label>
+              <input type="number" id="hInput" min="1" max="12000" step="1" inputmode="numeric" />
+            </div>
+            <div class="lock">
+              <span class="lockbtn on" id="lockBtn" role="checkbox" aria-checked="true" tabindex="0">
+                <span id="lockIcon">🔒</span><span data-i18n="f_lock">비율 고정</span>
+              </span>
+            </div>
+          </div>
+          <div class="presets" aria-label="quick scale">
+            <button type="button" data-scale="25">25%</button>
+            <button type="button" data-scale="50">50%</button>
+            <button type="button" data-scale="75">75%</button>
+            <button type="button" data-scale="100">100%</button>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label class="flabel" for="pctInput" data-i18n="f_percent">퍼센트 (%)</label>
+            <input type="number" id="pctInput" min="0.01" max="1000" step="0.01" inputmode="numeric" placeholder="100" />
+          </div>
+          <div class="field">
+            <label class="flabel" for="fmtSelect" data-i18n="f_format">출력 형식</label>
+            <select id="fmtSelect">
+              <option value="image/png">PNG</option>
+              <option value="image/jpeg">JPG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </div>
+        </div>
+<div class="sns-custom-row"><div><label class="flabel" for="customSizeName" data-i18n="sns_custom_name"></label><input type="text" id="customSizeName" maxlength="60" placeholder="예: 행사 홍보 배너"></div><button type="button" class="doc-btn" id="saveCustomSize" data-i18n="sns_save"></button><button type="button" class="doc-btn" id="addCurrentSize" data-i18n="sns_add_current"></button></div><p id="snsStorageStatus" class="sns-helper" role="status"></p>
+        <div class="field" id="qualityField">
+          <label class="flabel" for="qInput"><span data-i18n="f_quality">품질</span> · <span id="qLabelVal">90</span></label>
+          <div class="quality-row">
+            <input type="range" id="qInput" min="1" max="100" value="90" />
+            <span class="qval" id="qval">90</span>
+          </div>
+        </div>
+      </div>
+
+<section class="section" id="compositionSection"><h3 data-i18n="sns_fit_title">규격 자동 맞춤</h3><p>1단계: 요소 배치를 유지하고 확인된 배경만 새 규격에 맞춥니다. 글씨·로고·상품은 개별 재배치하거나 늘리지 않습니다. 배경/요소 분리는 편집 화면에서 확인하세요.</p><p id="automaticPolicyStatus" role="status" aria-live="polite"></p><div hidden aria-hidden="true" id="automaticLegacyControls"><h3 data-i18n="sns_fit_title"></h3><div class="row2"><div><label class="flabel" for="fitMode" data-i18n="sns_fit"></label><select id="fitMode"><option value="contain" data-i18n="sns_contain"></option><option value="cover" data-i18n="sns_cover"></option><option value="stretch" data-i18n="sns_stretch"></option></select></div><div><label class="flabel" for="backgroundColor" data-i18n="sns_bg"></label><div class="sns-bg-row"><input type="color" id="backgroundColor" value="#ffffff"><label><input type="checkbox" id="transparentBg"><span data-i18n="sns_transparent"></span></label></div></div></div><div id="positionControls"><div class="sns-toolbar"><label class="flabel" data-i18n="sns_position"></label><button type="button" class="doc-btn" id="centerPosition" data-i18n="sns_center"></button></div><div class="row2"><div><label class="flabel" for="positionX"><span data-i18n="sns_pos_x"></span> · <output id="positionXValue">50%</output></label><input type="range" id="positionX" min="0" max="100" value="50"></div><div><label class="flabel" for="positionY"><span data-i18n="sns_pos_y"></span> · <output id="positionYValue">50%</output></label><input type="range" id="positionY" min="0" max="100" value="50"></div></div></div><label class="flabel" for="resizeBehavior" data-i18n="sns_resize_behavior"></label><select id="resizeBehavior"><option value="auto" selected data-i18n="sns_auto_layout"></option><option value="preserve" data-i18n="sns_preserve_layout"></option><option value="reflow" data-i18n="sns_reflow_layout"></option></select><div class="sns-bg-row"><label><input type="checkbox" id="extendSourceBackground" checked><span data-i18n="sns_extend_solid"></span></label><button type="button" class="doc-btn" id="backgroundCandidatesOpen" data-i18n="sns_background_candidates"></button></div><p class="sns-helper" data-i18n="sns_background_help"></p><p id="compositionNotice" class="sns-helper" aria-live="polite"></p><p class="sns-helper" data-i18n="sns_fit_help"></p></div></section>
+      <!-- 미리보기 -->
+      <div class="section">
+        <h3 data-i18n="sec_preview">미리보기 (변환 결과)</h3><div id="editingBridge" hidden><p id="editingBridgeStatus" class="sns-helper" role="status"></p><div class="sns-toolbar"><button type="button" class="doc-btn" id="continueLayerEditing">요소 계속 편집</button><button type="button" class="doc-btn" id="saveEditableProject">편집 원본 저장</button></div></div>
+        <div class="preview-wrap">
+          <img id="previewImg" alt="변환 결과 미리보기 / Converted image preview" />
+          <p id="snsOutputWarnings" class="sns-output-warning" role="status"></p>
+          <div class="result-stats">
+            <span><span data-i18n="r_dimensions">크기</span>: <b id="resDims">—</b></span>
+            <span><span data-i18n="r_filesize">용량</span>: <b id="resSize">—</b> <span id="resDelta"></span></span>
+          </div>
+        </div>
+      </div>
+
+<section class="section sns-batch"><div class="sns-toolbar"><h3 data-i18n="sns_batch"></h3><span id="batchCount">0 / 12</span></div><p class="sns-helper" data-i18n="sns_batch_help"></p><p id="batchEmpty" class="sns-helper" data-i18n="sns_empty"></p><ol id="batchList"></ol><div class="sns-batch-buttons"><button type="button" class="btn btn-primary" id="batchDownloadBtn" disabled data-i18n="sns_zip"></button><button type="button" class="doc-btn" id="batchCancelBtn" hidden data-i18n="sns_cancel"></button><button type="button" class="doc-btn" id="batchClearBtn" data-i18n="sns_clear"></button></div><p id="batchStatus" class="sns-helper" role="status" aria-live="polite"></p></section>
+      <!-- 액션 -->
+      <p class="editor-note" data-i18n="limits">PNG는 투명도를 유지하고 JPG는 투명 영역을 흰색으로 저장합니다. GIF는 정지 이미지로 변환됩니다. 최대 30MB · 2,400만 픽셀 · 한 변 12,000px.</p>
+      <div class="actions">
+        <button class="btn btn-ghost" id="resetBtn" type="button"><span>↺</span><span data-i18n="btn_reset">초기화</span></button>
+        <button class="btn btn-primary" id="downloadBtn" type="button" disabled><span>↓</span><span data-i18n="btn_download">다운로드</span></button>
+      </div>
+    </div>
+
+<details class="sns-sources"><summary data-i18n="sns_sources">규격 출처와 확인 범위</summary><p class="sns-helper" data-i18n="sns_source_help"></p><ul id="snsSourceList"></ul><p><a href="./sns-specs.json" target="_blank" rel="noopener">SNS specs · JSON</a></p></details>
+    <!-- 사용 안내 + FAQ (SEO 콘텐츠) -->
+    <div class="content">
+      <section>
+        <h2 data-i18n="about_h">온라인 이미지 크기 조절·형식 변환</h2>
+        <p data-i18n="about_p1">블로그·쇼핑몰 상품 이미지, SNS 프로필 사진, 이력서 증명사진처럼 정해진 크기로 맞춰야 할 때, 이미지를 끌어다 놓고 원하는 너비·높이나 퍼센트만 입력하면 바로 크기가 조절됩니다. 비율 고정을 켜두면 가로세로가 찌그러지지 않습니다.</p>
+        <p data-i18n="about_p2">PNG를 용량이 작은 JPG나 WebP로 바꾸거나, PNG의 투명도를 유지하거나 JPG를 PNG 형식으로 저장하는 형식 변환도 한 번에 됩니다. JPG·WebP는 품질 슬라이더로 용량과 화질의 균형을 직접 맞출 수 있습니다. 일반 리사이징과 배치 처리는 브라우저에서 이루어집니다. 선택형 사진 AI는 이 PC의 로컬 프로그램에서 처리하며 외부 AI 서비스로 이미지를 보내지 않습니다.</p>
+      </section>
+      <section>
+        <h2 data-i18n="faq_h">자주 묻는 질문</h2>
+        <details>
+          <summary data-i18n="faq_q1">이미지가 서버로 업로드되나요?</summary>
+          <div class="ans" data-i18n="faq_a1">외부 AI 서버로 이미지를 보내지 않습니다. 일반 편집은 브라우저에서, 선택형 사진 AI는 이 PC에 실행한 로컬 프로그램에서 처리합니다.</div>
+        </details>
+        <details>
+          <summary data-i18n="faq_q2">어떤 형식으로 변환할 수 있나요?</summary>
+          <div class="ans" data-i18n="faq_a2">PNG, JPG(JPEG), WebP로 변환할 수 있습니다. JPG와 WebP는 품질 슬라이더로 용량을 조절할 수 있습니다. PNG는 무손실이라 품질 조절이 없습니다.</div>
+        </details>
+        <details>
+          <summary data-i18n="faq_q3">비율을 유지하면서 크기를 줄일 수 있나요?</summary>
+          <div class="ans" data-i18n="faq_a3">네. 비율 고정을 켜면 너비나 높이 한쪽만 입력해도 다른 쪽이 자동 계산됩니다. 퍼센트(%) 입력으로 50% 처럼 한 번에 줄일 수도 있습니다.</div>
+        </details>
+        <details>
+          <summary data-i18n="faq_q4">지원하는 이미지 형식은 무엇인가요?</summary>
+          <div class="ans" data-i18n="faq_a4">브라우저가 디코딩할 수 있는 PNG, JPG, WebP, GIF, BMP 등 대부분의 이미지를 불러올 수 있습니다. 출력은 PNG·JPG·WebP를 지원합니다.</div>
+        </details>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="row" data-i18n="foot_license">오픈소스 · 라이선스 안내</div>
+    <div class="row">
+      <a href="https://github.com/hanariago/tool-image-resize" target="_blank" rel="noopener">GitHub</a>
+      · Original by <a href="https://x.com/thezenvoid" target="_blank" rel="noopener">Lena</a>
+    </div>
+    <div class="row">리사이징 코엑스 · Image tools · <a href="./THIRD_PARTY_NOTICES.md" target="_blank" rel="noopener">Third-party notices</a></div>
+  </footer>
+</div>
+
+<script src="./sns-catalog.js?v=brief-fast-20261101"></script>
+<script src="./vendor/zip/jszip.min.js"></script>
+<script>
+/* ---------------- i18n ---------------- */
+const I18N = {
+  ko: {
+    meta_title: "이미지 리사이즈 - 무료 온라인 이미지 크기 조절·형식 변환 (PNG/JPG/WebP)",
+    meta_desc: "이미지 크기 조절과 PNG·JPG·WebP 형식 변환을 브라우저에서 바로. 비율 고정, 퍼센트 리사이즈, JPG/WebP 품질 조절. 서버 전송 없이 안전하게.",
+    title: "이미지 리사이즈",
+    subtitle: "이미지 크기 조절 + PNG · JPG · WebP 형식 변환. 서버 전송 없이 브라우저에서.",
+    dz_title: "이미지를 끌어다 놓거나 클릭해서 선택",
+    dz_sub: "PNG · JPG · WebP · GIF · BMP 지원",
+    dz_hint: "클립보드에서 붙여넣기(Ctrl/⌘+V)도 됩니다",
+    sec_original: "원본 정보",
+    m_dimensions: "크기", m_filesize: "파일 크기", m_format: "형식",
+    sec_resize: "출력 규격",
+    f_width: "너비 (px)", f_height: "높이 (px)", f_lock: "비율 고정",
+    f_percent: "퍼센트 (%)", f_format: "출력 형식", f_quality: "품질",
+    sec_preview: "미리보기 (변환 결과)",
+    r_dimensions: "크기", r_filesize: "용량",
+    btn_reset: "초기화", btn_download: "다운로드",
+    about_h: "온라인 이미지 크기 조절·형식 변환",
+    about_p1: "블로그·쇼핑몰 상품 이미지, SNS 프로필 사진, 이력서 증명사진처럼 정해진 크기로 맞춰야 할 때, 이미지를 끌어다 놓고 원하는 너비·높이나 퍼센트만 입력하면 바로 크기가 조절됩니다. 비율 고정을 켜두면 가로세로가 찌그러지지 않습니다.",
+    about_p2: "PNG를 용량이 작은 JPG나 WebP로 바꾸거나, PNG의 투명도를 유지하거나 JPG를 PNG 형식으로 저장하는 형식 변환도 한 번에 됩니다. JPG·WebP는 품질 슬라이더로 용량과 화질의 균형을 직접 맞출 수 있습니다. 일반 리사이징과 배치 처리는 브라우저에서 이루어집니다. 선택형 사진 AI는 이 PC의 로컬 프로그램에서 처리하며 외부 AI 서비스로 이미지를 보내지 않습니다.",
+    faq_h: "자주 묻는 질문",
+    faq_q1: "이미지가 서버로 업로드되나요?",
+    faq_a1: "외부 AI 서버로 이미지를 보내지 않습니다. 일반 편집은 브라우저에서, 선택형 사진 AI는 이 PC에 실행한 로컬 프로그램에서 처리합니다.",
+    faq_q2: "어떤 형식으로 변환할 수 있나요?",
+    faq_a2: "PNG, JPG(JPEG), WebP로 변환할 수 있습니다. JPG와 WebP는 품질 슬라이더로 용량을 조절할 수 있습니다. PNG는 무손실이라 품질 조절이 없습니다.",
+    faq_q3: "비율을 유지하면서 크기를 줄일 수 있나요?",
+    faq_a3: "네. 비율 고정을 켜면 너비나 높이 한쪽만 입력해도 다른 쪽이 자동 계산됩니다. 퍼센트(%) 입력으로 50% 처럼 한 번에 줄일 수도 있습니다.",
+    faq_q4: "지원하는 이미지 형식은 무엇인가요?",
+    faq_a4: "브라우저가 디코딩할 수 있는 PNG, JPG, WebP, GIF, BMP 등 대부분의 이미지를 불러올 수 있습니다. 출력은 PNG·JPG·WebP를 지원합니다.",
+    foot_license: "오픈소스 · 라이선스 안내",
+    foot_hub: "🔧 다른 도구 모음 →",
+    unit_smaller: "작아짐", unit_larger: "커짐"
+  },
+  en: {
+    meta_title: "Image Resize - Free Online Image Resizer & Converter (PNG/JPG/WebP)",
+    meta_desc: "Resize images and convert between PNG, JPG and WebP right in your browser. Lock aspect ratio, resize by percent, adjust JPG/WebP quality. No upload, fully private.",
+    title: "Image Resize",
+    subtitle: "Resize images + convert PNG · JPG · WebP. All in your browser, no upload.",
+    dz_title: "Drag & drop an image, or click to choose",
+    dz_sub: "PNG · JPG · WebP · GIF · BMP supported",
+    dz_hint: "You can also paste from clipboard (Ctrl/⌘+V)",
+    sec_original: "Original",
+    m_dimensions: "Dimensions", m_filesize: "File size", m_format: "Format",
+    sec_resize: "Resize",
+    f_width: "Width (px)", f_height: "Height (px)", f_lock: "Lock ratio",
+    f_percent: "Percent (%)", f_format: "Output format", f_quality: "Quality",
+    sec_preview: "Preview (result)",
+    r_dimensions: "Size", r_filesize: "File size",
+    btn_reset: "Reset", btn_download: "Download",
+    about_h: "Online image resizer & format converter",
+    about_p1: "When you need an exact size — product photos for shops, social profile pictures, ID photos for resumes — just drop your image and type the width, height, or a percentage. Keep \"Lock ratio\" on and your image never gets stretched.",
+    about_p2: "Convert a heavy PNG into a smaller JPG or WebP, or save a JPG as PNG (this does not remove its background), in one step. For JPG and WebP, the quality slider lets you balance file size against image quality. Standard resizing and layouts run in your browser. Optional photo AI runs in a local program on this PC; images are not sent to an external AI service.",
+    faq_h: "Frequently asked questions",
+    faq_q1: "Is my image uploaded to a server?",
+    faq_a1: "Images are not uploaded to an external AI service. Standard editing runs in the browser; optional photo AI communicates with the local program running on this PC.",
+    faq_q2: "Which formats can I convert to?",
+    faq_a2: "PNG, JPG (JPEG) and WebP. JPG and WebP have a quality slider to control file size. PNG is lossless, so it has no quality setting.",
+    faq_q3: "Can I resize while keeping the aspect ratio?",
+    faq_a3: "Yes. With \"Lock ratio\" on, entering just the width or height auto-calculates the other side. You can also use percent to scale to 50% at once.",
+    faq_q4: "Which image formats are supported?",
+    faq_a4: "Any image your browser can decode — PNG, JPG, WebP, GIF, BMP and more. Output supports PNG, JPG and WebP.",
+    foot_license: "Open source · License notices",
+    foot_hub: "🔧 More tools →",
+    unit_smaller: "smaller", unit_larger: "larger"
+  }
+};
+
+let lang = "ko";
+function readLanguage() { try { return localStorage.getItem("tir_lang"); } catch { return null; } }
+function detectLang() {
+  const q = new URLSearchParams(location.search).get("lang");
+  if (q && I18N[q]) return q;
+  const saved = readLanguage();
+  if (saved && I18N[saved]) return saved;
+  return "ko";
+}
+function applyI18n() {
+  const dict = I18N[lang];
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    if (!dict[key]) return;
+    const attr = el.getAttribute("data-i18n-attr");
+    if (attr) el.setAttribute(attr, dict[key]);
+    else el.textContent = dict[key];
+  });
+  document.querySelectorAll(".lang-toggle button").forEach(b =>
+    b.classList.toggle("active", b.dataset.lang === lang));
+  // result delta label uses dict -> re-render if a result exists
+  if (lastBlob) renderDelta();
+  refreshStatus();
+  updateDocumentLabels();
+  document.querySelectorAll(".lang-toggle button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+}
+function setLang(l) {
+  lang = l;
+  try { localStorage.setItem("tir_lang", l); } catch {}
+  applyI18n();
+}
+
+
+/* Hardened local image pipeline; no upload or remote dependencies. */
+I18N.ko.limits = 'PNG는 투명도를 유지하고 JPG는 투명 영역을 흰색으로 저장합니다. GIF는 정지 이미지로 변환됩니다. 최대 30MB · 2,400만 픽셀 · 한 변 12,000px.';
+I18N.en.limits = 'PNG preserves transparency; JPG fills transparent areas white. GIF becomes a still image. Max 30MB · 24 million pixels · 12,000px per side.';
+const $ = id => document.getElementById(id);
+const dropzone = $('dropzone'), fileInput = $('fileInput'), editor = $('editor');
+const wInput = $('wInput'), hInput = $('hInput'), pctInput = $('pctInput');
+const fmtSelect = $('fmtSelect'), qInput = $('qInput'), qval = $('qval'), qLabelVal = $('qLabelVal'), qualityField = $('qualityField');
+const lockBtn = $('lockBtn'), lockIcon = $('lockIcon'), previewImg = $('previewImg');
+const MAX_SIDE = 12000, MAX_PIXELS = 24000000, MAX_BYTES = 30 * 1024 * 1024;
+const TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', bmp: 'image/bmp' };
+let img = null, natW = 0, natH = 0, origName = 'image', origBytes = 0;
+let lastBlob = null, lastUrl = null, ratioLock = true, renderTimer = null;
+let generation = 0, loadGeneration = 0, loadingUrl = null, statusKey = '', statusError = false;
+const messages = {
+  invalid: ['PNG·JPG·WebP·GIF·BMP 이미지 파일을 선택해 주세요. PPT·PDF는 아직 지원하지 않습니다.', 'Choose a PNG, JPG, WebP, GIF or BMP image. PPT and PDF are not supported yet.'],
+  large: ['30MB 이하의 파일을 선택해 주세요.', 'Choose a file no larger than 30MB.'],
+  dimensions: ['크기는 양의 정수여야 하며 한 변 12,000px, 전체 2,400만 픽셀 이하여야 합니다.', 'Use positive integer dimensions, at most 12,000px per side and 24 million pixels in total.'],
+  percent: ['퍼센트는 0.01~1000 사이로 입력해 주세요.', 'Enter a percentage from 0.01 to 1000.'],
+  decode: ['이미지를 읽지 못했습니다. 파일이 손상되었거나 브라우저가 지원하지 않는 형식일 수 있습니다.', 'Could not decode the image. It may be damaged or unsupported by this browser.'],
+  loading: ['이미지를 읽는 중…', 'Loading image…'], working: ['변환 중…', 'Converting…'], ready: ['변환이 완료되었습니다. 다운로드할 수 있습니다.', 'Conversion complete. Ready to download.'],
+  autoReview: ['원본 요소를 보호했습니다. 배경 분리 또는 배경 처리에 검토가 필요합니다.', 'Dimensions were adapted, but element reflow was not completed. Original content is protected; review is required.'],
+  encode: ['이 크기 또는 출력 형식으로 저장하지 못했습니다. 크기나 형식을 변경해 주세요.', 'Could not encode this size or format. Try a smaller size or another format.'],
+  gif: ['GIF를 정지 이미지로 변환합니다. 애니메이션은 유지되지 않습니다.', 'GIF will be converted to a still image. Animation is not preserved.'],
+  multiple: ['이미지는 한 번에 한 장씩 선택해 주세요.', 'Choose one image at a time.']
+};
+function refreshStatus() {
+  const el = $('status'); el.hidden = !statusKey; el.classList.toggle('error', statusError);
+  el.textContent = statusKey ? messages[statusKey][lang === 'ko' ? 0 : 1] : '';
+}
+function status(key, error = false) { statusKey = key; statusError = error; refreshStatus(); }
+function invalidate() { if(typeof cancelBatch==='function')cancelBatch();if(typeof renderCompositionNotice==='function')renderCompositionNotice(); ++generation; clearTimeout(renderTimer); lastBlob = null; $('downloadBtn').disabled = true; }
+function clearResult() { if (lastUrl) URL.revokeObjectURL(lastUrl); lastUrl = null; previewImg.removeAttribute('src'); $('resDims').textContent = '—'; $('resSize').textContent = '—'; $('resDelta').textContent = ''; }
+function validDimensions(w,h) { return Number.isSafeInteger(w) && Number.isSafeInteger(h) && w > 0 && h > 0 && w <= MAX_SIDE && h <= MAX_SIDE && w*h <= MAX_PIXELS; }
+function fmtBytes(b) { return b < 1024 ? b+' B' : b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(2)+' MB'; }
+function extOf(type) { return type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg'; }
+function typeLabel(type) { return type === 'image/jpeg' ? 'JPG' : type === 'image/webp' ? 'WebP' : type.split('/')[1].toUpperCase(); }
+function loadImageFile(file) {
+  if (!file) return;
+  const ext = (file.name || '').split('.').pop().toLowerCase();
+  const type = file.type || TYPES[ext];
+  if (!Object.values(TYPES).includes(type)) { status('invalid', true); return; }
+  if (file.size > MAX_BYTES) { status('large', true); return; }
+  const token = ++loadGeneration;
+  invalidate(); clearResult(); img = null; natW = natH = 0;
+  editor.classList.remove('show'); dropzone.style.display = '';
+  if (loadingUrl) URL.revokeObjectURL(loadingUrl);
+  const url = URL.createObjectURL(file); loadingUrl = url; status('loading');
+  const im = new Image(); im.dataset.coexRasterType=type;
+  function release() { URL.revokeObjectURL(url); if (loadingUrl === url) loadingUrl = null; }
+  im.onload = () => {
+    release(); if (token !== loadGeneration) return;
+    if (!validDimensions(im.naturalWidth, im.naturalHeight)) { status('dimensions', true); return; }
+    img = im; natW = im.naturalWidth; natH = im.naturalHeight;
+    origBytes = file.size; origName = (file.name || 'image').replace(/\.[^.]+$/, '') || 'image';
+    $('origDims').textContent = natW+' × '+natH+' px'; $('origSize').textContent = fmtBytes(origBytes); $('origFormat').textContent = typeLabel(type);
+    wInput.value = natW; hInput.value = natH; pctInput.value = '100';
+    fmtSelect.value = 'image/png'; qInput.value = qval.textContent = qLabelVal.textContent = '90';
+    ratioLock = false; lockBtn.classList.remove('on'); lockBtn.setAttribute('aria-checked','false'); lockIcon.textContent = '🔓';
+    editor.classList.add('show'); dropzone.style.display = 'none'; syncQualityVisibility();
+    scheduleRender(type === 'image/gif' ? 'gif' : 'ready');globalThis.notifyLayerAnalysisSource?.();
+  };
+  im.onerror = () => { release(); if (token === loadGeneration) status('decode', true); };
+  im.src = url;
+}
+function onWidthChange() {
+  const w = Number(wInput.value);
+  if (ratioLock && natW && w > 0 && Number.isFinite(w)) hInput.value = Math.max(1, Math.round(w*natH/natW));
+  pctInput.value = ratioLock && natW ? +(w/natW*100).toFixed(2) : '';
+  scheduleRender();
+}
+function onHeightChange() {
+  const h = Number(hInput.value);
+  if (ratioLock && natH && h > 0 && Number.isFinite(h)) wInput.value = Math.max(1, Math.round(h*natW/natH));
+  pctInput.value = ratioLock && natH ? +(h/natH*100).toFixed(2) : '';
+  scheduleRender();
+}
+function onPercentChange() {
+  const p = Number(pctInput.value);
+  if (!Number.isFinite(p) || p < .01 || p > 1000) { invalidate(); clearResult(); status('percent', true); return; }
+  wInput.value = Math.max(1, Math.round(natW*p/100)); hInput.value = Math.max(1, Math.round(natH*p/100)); scheduleRender();
+}
+function syncQualityVisibility() { qualityField.classList.toggle('hide', fmtSelect.value === 'image/png'); }
+function scheduleRender(doneStatus = documentSession ? (documentHasPartial ? 'documentPartial' : 'documentReady') : 'ready') {
+  invalidate(); if (!img) return;
+  const w = Number(wInput.value), h = Number(hInput.value);
+  if (!validDimensions(w,h)) { clearResult(); status('dimensions', true); return; }
+  status('working'); const token = generation;
+  renderTimer = setTimeout(() => render(token,w,h,doneStatus),120);
+}
+function render(token,w,h,doneStatus) {
+  if (!img || token !== generation) return;
+  const type = fmtSelect.value, canvas = document.createElement('canvas');
+  try {
+    canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); if (!ctx) throw Error('context');
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    const automaticDecision=drawComposition(ctx,img,w,h,readCompositionSettings());globalThis.coexLastOutputDecision=automaticDecision;
+    canvas.toBlob(blob => {
+      canvas.width = canvas.height = 0;
+      if (token !== generation) return;
+      if (!blob || blob.type !== type) { clearResult(); status('encode',true); return; }
+      if (lastUrl) URL.revokeObjectURL(lastUrl);
+      lastBlob = blob; lastUrl = URL.createObjectURL(blob); previewImg.src = lastUrl;
+      $('resDims').textContent = w+' × '+h+' px'; $('resSize').textContent = fmtBytes(blob.size); renderDelta();
+      $('downloadBtn').disabled = false; status(automaticDecision?.status==='review'?'autoReview':doneStatus,automaticDecision?.status==='review');if(automaticDecision){coexAutoResizePolicy.record(blob,automaticDecision);$('automaticPolicyStatus').textContent=coexAutoResizePolicy.describe(automaticDecision);}showOutputCompatibility();
+    }, type, type === 'image/png' ? undefined : Number(qInput.value)/100);
+  } catch { canvas.width = canvas.height = 0; if (token === generation) { clearResult(); status('encode',true); } }
+}
+function renderDelta() {
+  const el = $('resDelta'); el.textContent = ''; if (!lastBlob || !origBytes) return;
+  const diff = lastBlob.size-origBytes, pct = Math.abs(diff/origBytes*100); if (pct < .5) return;
+  const span = document.createElement('span'); span.className = diff < 0 ? 'delta-down' : 'delta-up';
+  span.textContent = (diff < 0 ? '▼ ' : '▲ ')+pct.toFixed(0)+'% '+I18N[lang][diff < 0 ? 'unit_smaller' : 'unit_larger']; el.appendChild(span);
+}
+function download() {
+  if (!lastBlob || $('downloadBtn').disabled) return;
+  const a = document.createElement('a'); a.href = lastUrl; const downloadStem=origName+'_resized'; a.download = ((typeof activePreset!=='undefined'&&activePreset?.asciiFilename)?(downloadStem.replace(/[^a-zA-Z0-9]/g,'')||'image'):downloadStem)+'.'+extOf(lastBlob.type); document.body.appendChild(a); a.click(); a.remove();
+}
+function reset() {
+  globalThis.layerSnapshotDetached?.();
+  clearDocument();
+  ++loadGeneration; invalidate(); if (loadingUrl) URL.revokeObjectURL(loadingUrl); loadingUrl = null;
+  img = null; natW = natH = 0; origBytes = 0; clearResult(); fileInput.value = ''; editor.classList.remove('show'); dropzone.style.display = ''; status(''); dropzone.focus();globalThis.notifyLayerAnalysisSource?.();
+}
+function setLock(on) {
+  ratioLock = on; lockBtn.classList.toggle('on',on); lockBtn.setAttribute('aria-checked',String(on)); lockIcon.textContent = on ? '🔒' : '🔓'; if (!on) pctInput.value = '';
+}
+function chooseFiles(files) { if (files.length !== 1) { if (files.length) status('multiple', true); return; } loadFile(files[0]); }
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('keydown',e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+fileInput.addEventListener('change',e => { chooseFiles(e.target.files); fileInput.value = ''; });
+['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev,e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev,e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+window.addEventListener('dragover',e => { if (Array.from(e.dataTransfer.types).includes('Files')) e.preventDefault(); });
+window.addEventListener('drop',e => { if (e.dataTransfer.files.length) { e.preventDefault(); chooseFiles(e.dataTransfer.files); } });
+window.addEventListener('paste',e => { const files = Array.from(e.clipboardData?.items || []).filter(it => it.kind === 'file' && it.type.startsWith('image/')).map(it=>it.getAsFile()).filter(Boolean); if (files.length) { e.preventDefault(); chooseFiles(files); } });
+wInput.addEventListener('input',onWidthChange); hInput.addEventListener('input',onHeightChange); pctInput.addEventListener('input',onPercentChange);
+fmtSelect.addEventListener('change',() => { syncQualityVisibility(); scheduleRender(); });
+qInput.addEventListener('input',() => { qval.textContent = qLabelVal.textContent = qInput.value; scheduleRender(); });
+document.querySelectorAll('.presets button').forEach(btn=>btn.addEventListener('click',()=>{ pctInput.value = btn.dataset.scale; onPercentChange(); }));
+lockBtn.addEventListener('click',()=>setLock(!ratioLock)); lockBtn.addEventListener('keydown',e=>{ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLock(!ratioLock); } });
+$('downloadBtn').addEventListener('click',download); $('resetBtn').addEventListener('click',reset);
+document.querySelectorAll('.lang-toggle button').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.lang)));
+window.addEventListener('pagehide',event=>{ if (event.persisted) return; ++loadGeneration; invalidate(); if (loadingUrl) URL.revokeObjectURL(loadingUrl); clearResult(); });
+/* Document import controller: document, page and output requests are invalidated separately. */
+let documentSession=null,documentEpoch=0,pageEpoch=0,documentFile=null,documentPage=0,documentHasPartial=false;
+let documentAbort=null,pageAbort=null;
+const docControls=$('documentControls'),pageSelect=$('pageSelect');
+Object.assign(messages,{
+  invalid:['이미지, PDF 또는 PowerPoint(.pptx) 파일을 선택해 주세요.','Choose an image, PDF or PowerPoint (.pptx) file.'],
+  legacyPpt:['구형 .ppt는 PowerPoint에서 .pptx 또는 PDF로 저장한 뒤 선택해 주세요.','Save legacy .ppt as .pptx or PDF in PowerPoint, then select it here.'],
+  documentError:['문서를 읽지 못했습니다. 손상되었거나 지원하지 않는 내용이 있을 수 있습니다.','Could not read this document. It may be damaged or contain unsupported content.'],
+  documentConnection:['문서 기능을 불러오지 못했습니다. 사이트 또는 로컬 서버 연결을 확인하고, 페이지를 새로고침한 뒤 파일을 다시 선택해 주세요.','Could not load the document tools. Check the site or local server connection, refresh the page, then select the file again.'],
+  documentPages:['문서에 읽을 수 있는 페이지/슬라이드가 없습니다.','No readable document pages or slides were found.'],
+  documentPassword:['암호가 설정된 문서는 암호를 해제한 PDF 또는 PPTX로 저장한 뒤 선택해 주세요.','Save a password-free PDF or PPTX before importing this document.'],
+  documentWorking:['문서 페이지를 변환하는 중…','Rendering document page…'],
+  documentReady:['선택한 페이지를 이미지로 변환했습니다. 크기를 조절하고 다운로드하세요.','Page converted to an image. Resize it and download.'],
+  documentPartial:['일부 슬라이드 요소를 표시하지 못했습니다. 미리보기를 확인하고, 원본과 다르면 PowerPoint에서 PDF로 저장해 사용해 주세요.','Some slide elements could not be rendered. Check the preview; export to PDF in PowerPoint if it differs from the original.'],
+});
+Object.assign(I18N.ko,{
+  subtitle:'이미지 · PDF · PowerPoint 크기 조절 + PNG · JPG · WebP 변환. 서버 전송 없이 브라우저에서.',
+  dz_title:'이미지·PDF·PPTX를 끌어다 놓거나 클릭해서 선택',dz_sub:'PNG · JPG · WebP · GIF · BMP · PDF · PPTX 지원',
+  doc_page:'페이지 / 슬라이드',doc_prev:'이전',doc_next:'다음',doc_change:'파일 바꾸기',
+  doc_notice:'선택한 페이지를 PNG·JPG·WebP 이미지로 저장합니다. 편집 가능한 PDF·PPTX 출력은 지원하지 않습니다. PPTX의 글꼴·일부 효과는 원본과 다를 수 있으며, 외부 링크 자료는 불러오지 않습니다. 문서는 기본 2배·긴 변 최대 4096px로 이미지화되며, 그 이상 크기는 이 이미지의 확대입니다.',
+  limits:'이미지 최대 30MB · 문서는 용량·페이지 수로 사전 거절하지 않습니다(기기 메모리 범위). 출력 한 변 12,000px · 2,400만 픽셀. GIF는 정지 이미지로, JPG 투명 영역은 흰색으로 저장됩니다.',
+  faq_a4:'이미지 PNG·JPG·WebP·GIF·BMP, PDF와 PowerPoint(.pptx)를 불러올 수 있습니다. 문서는 페이지를 선택해 PNG·JPG·WebP로 저장합니다. 구형 .ppt는 .pptx 또는 PDF로 저장한 뒤 사용해 주세요.',
+});
+Object.assign(I18N.en,{
+  subtitle:'Resize images, PDF & PowerPoint pages. Export PNG · JPG · WebP, entirely in your browser.',
+  dz_title:'Drop an image, PDF or PPTX, or click to choose',dz_sub:'PNG · JPG · WebP · GIF · BMP · PDF · PPTX supported',
+  doc_page:'Page / slide',doc_prev:'Previous',doc_next:'Next',doc_change:'Change file',
+  doc_notice:'Save a selected page as a PNG, JPG or WebP image. Editable PDF/PPTX export is not supported. PPTX fonts and some effects may differ; external linked assets are not loaded. Pages are rasterized at up to 2× with a 4096px longest edge; larger outputs upscale this image.',
+  limits:'Images up to 30MB; documents are read within available device memory. Output: 12,000px per side, 24 million pixels. GIF becomes still; JPG fills transparency white.',
+  faq_a4:'Import PNG, JPG, WebP, GIF, BMP, PDF and PowerPoint (.pptx). Select a document page and save it as PNG, JPG or WebP. Save legacy .ppt as .pptx or PDF first.',
+});
+function updateDocumentLabels(){
+  $('origDims').previousElementSibling.textContent=documentSession ? (lang==='ko'?'이미지화 크기':'Rasterized size') : I18N[lang].m_dimensions;
+  $('pagePrev').disabled=!documentSession || documentPage<=0;
+  $('pageNext').disabled=!documentSession || documentPage>=documentSession.count-1;
+  $('documentCount').textContent=documentSession ? (documentPage+1)+' / '+documentSession.count : '';
+}
+function clearDocument(){
+  ++documentEpoch;++pageEpoch;documentAbort?.abort();pageAbort?.abort();documentAbort=pageAbort=null;
+  const previous=documentSession;documentSession=null;documentFile=null;documentHasPartial=false;docControls.hidden=true;pageSelect.replaceChildren();
+  if(previous) void previous.dispose().catch(()=>{});
+  updateDocumentLabels();
+}
+async function loadFile(file){
+  if(!file)return;
+  const layerExt=(file.name||'').split('.').pop().toLowerCase();
+  if(['psd','svg','json'].includes(layerExt)){
+    await import('./layers.mjs');
+    await globalThis.layerFileImport(file);return;
+  }
+  const ext=(file.name||'').split('.').pop().toLowerCase();
+  if(ext==='ppt'){status('legacyPpt',true);return;}
+  const kind=ext==='pdf'||file.type==='application/pdf'?'pdf':ext==='pptx'||file.type==='application/vnd.openxmlformats-officedocument.presentationml.presentation'?'pptx':null;
+  if(!kind){const type=file.type||TYPES[ext];if(!Object.values(TYPES).includes(type)){status('invalid',true);return;}if(file.size>MAX_BYTES){status('large',true);return;}}
+  globalThis.layerSnapshotDetached?.();
+  if(!kind){clearDocument();loadImageFile(file);return;}
+  clearDocument();++loadGeneration;invalidate();clearResult();img=null;natW=natH=0;editor.classList.remove('show');dropzone.style.display='';
+  if(loadingUrl){URL.revokeObjectURL(loadingUrl);loadingUrl=null;}
+  const token=documentEpoch;documentAbort=new AbortController();const signal=documentAbort.signal;
+  status('loading');
+  let stage='module-load';
+  globalThis.coexDocumentImportError=null;
+  try{
+    const module=await import('./documents.mjs');
+    stage='file-read';
+    const buffer=kind==='pptx'?file:await file.arrayBuffer();
+    if(token!==documentEpoch)return;
+    const header=new Uint8Array(kind==='pptx'?await file.slice(0,8).arrayBuffer():buffer.slice(0,8));
+    if(kind==='pptx'&&header[0]===0xd0&&header[1]===0xcf)throw Error('PASSWORD');
+    stage='document-open';
+    const session=await module.openDocument(buffer,kind,signal);
+    if(token!==documentEpoch){await session.dispose();return;}
+    documentSession=session;documentFile=file;documentPage=0;
+    for(let i=0;i<session.count;i++){const option=document.createElement('option');option.value=String(i);option.textContent=String(i+1);pageSelect.appendChild(option);}
+    $('documentName').textContent=file.name;docControls.hidden=false;dropzone.style.display='none';
+    fmtSelect.value='image/png';qInput.value=qval.textContent=qLabelVal.textContent='90';syncQualityVisibility();
+    await renderDocumentPage(0);
+  }catch(error){
+    if(token!==documentEpoch||signal.aborted)return;
+    clearResult();editor.classList.remove('show');dropzone.style.display='';
+    reportDocumentError(error,{stage,kind,file});
+  }
+}
+function documentErrorKey(error,stage){
+  const message=String(error?.message||error||'');
+  if(message==='PASSWORD')return 'documentPassword';
+  if(message==='PAGES')return 'documentPages';
+  if(message==='DIMENSIONS')return 'dimensions';
+  // Recognize browser module/transport failures without treating every TypeError as a connection error.
+  const moduleFailure=/failed to fetch dynamically imported module|error loading dynamically imported module|importing a module script failed|failed to load module script/i.test(message);
+  const fetchFailure=error?.name==='TypeError'&&/^(failed to fetch|fetch failed|load failed|networkerror when attempting to fetch resource\.?)$/i.test(message);
+  return moduleFailure||(stage!=='file-read'&&fetchFailure)?'documentConnection':'documentError';
+}
+function reportDocumentError(error,{stage,kind,file,pageIndex=null}){
+  const key=documentErrorKey(error,stage);
+  const diagnostic={stage,kind,pageIndex,file:{name:file?.name||'',size:file?.size||0,type:file?.type||''},error:{name:error?.name||'Error',message:String(error?.message||error||''),stack:error?.stack||''},statusKey:key,at:new Date().toISOString()};
+  globalThis.coexDocumentImportError=diagnostic;
+  console.error('[coex-document-import]',diagnostic,error);
+  status(key,true);
+}
+async function renderDocumentPage(index){
+  if(!documentSession||!Number.isInteger(index)||index<0||index>=documentSession.count)return;
+  const token=++pageEpoch,epoch=documentEpoch,session=documentSession;
+  pageAbort?.abort();pageAbort=new AbortController();const signal=pageAbort.signal;
+  invalidate();clearResult();img=null;editor.classList.remove('show');status('documentWorking');
+  documentPage=index;pageSelect.value=String(index);updateDocumentLabels();
+  let stage='page-render';
+  globalThis.coexDocumentImportError=null;
+  try{
+    const result=await session.render(index,signal,(done,total)=>{if(token===pageEpoch&&epoch===documentEpoch&&!signal.aborted)$('status').textContent=(lang==='ko'?'PPTX 원본 객체 처리 중 ':'Reading PPTX objects ')+done+' / '+total;});
+    if(token!==pageEpoch||epoch!==documentEpoch||signal.aborted){result.canvas.width=result.canvas.height=0;return;}
+    stage='page-apply';
+    if(session.kind==='pdf')result.canvas.dataset.coexPdfRaster='true';
+    if(session.kind==='pptx')layerNativeSources.set(result.canvas,{nativeProject:result.layerProject,nativeError:result.nativeError||null});
+    documentHasPartial=result.partial;img=result.canvas;natW=img.width;natH=img.height;
+    if(!validDimensions(natW,natH))throw Error('DIMENSIONS');
+    origBytes=documentFile.size;origName=documentFile.name.replace(/\.[^.]+$/,'')+'_'+(session.kind==='pdf'?'page':'slide')+'-'+String(index+1).padStart(2,'0');
+    $('origDims').textContent=natW+' × '+natH+' px';$('origSize').textContent=fmtBytes(origBytes);$('origFormat').textContent=session.kind==='pdf'?'PDF':'PPTX';
+    wInput.value=natW;hInput.value=natH;pctInput.value='100';ratioLock=false;lockBtn.classList.remove('on');lockBtn.setAttribute('aria-checked','false');lockIcon.textContent='🔓';
+    editor.classList.add('show');dropzone.style.display='none';
+    scheduleRender(result.partial?'documentPartial':'documentReady');globalThis.notifyLayerAnalysisSource?.();
+  }catch(error){
+    if(token!==pageEpoch||epoch!==documentEpoch||signal.aborted)return;
+    clearResult();img=null;editor.classList.remove('show');reportDocumentError(error,{stage,kind:session.kind,file:documentFile,pageIndex:index});
+  }
+}
+$('pagePrev').addEventListener('click',()=>renderDocumentPage(documentPage-1));
+$('pageNext').addEventListener('click',()=>renderDocumentPage(documentPage+1));
+pageSelect.addEventListener('change',()=>renderDocumentPage(Number(pageSelect.value)));
+$('documentChange').addEventListener('click',()=>fileInput.click());
+const imageDelta=renderDelta;
+renderDelta=function(){if(documentSession){$('resDelta').textContent='';return;}imageDelta();};
+window.addEventListener('pagehide',event=>{if(!event.persisted)clearDocument();});
+if(location.protocol==='file:'){
+  const help=document.createElement('p');help.className='notice';help.textContent='PDF·PPTX 기능은 폴더의 시작.cmd로 실행하거나 온라인 사이트에서 사용해 주세요.';dropzone.before(help);
+}
+
+
+
+// The analyser reads an unmodified source; output sizes/crops do not change its coordinates.
+const layerAnalysisSkippedSources=new WeakSet();
+const layerNativeSources=new WeakMap();
+globalThis.getLayerAnalysisSource=function(){
+  if(!img||layerAnalysisSkippedSources.has(img))return null;
+  return {source:img,name:origName,inputKind:documentSession?.kind==='pptx'||layerNativeSources.get(img)?.nativeProject?'layered':'raster',sourceFormat:documentSession?.kind||img.dataset?.coexRasterType||'image',...(layerNativeSources.get(img)||{}),key:loadGeneration+':'+documentEpoch+':'+pageEpoch};
+};
+
+globalThis.invalidateLayerSnapshot=function(options={}){
+  ++loadGeneration;invalidate();clearResult();img=null;
+  if(options?.keepEditing){editor.classList.add('show');dropzone.style.display='none';return;}
+  natW=natH=0;editor.classList.remove('show');dropzone.style.display='';
+};
+globalThis.getLayerOutputContextKey=()=>loadGeneration+':'+documentEpoch+':'+pageEpoch;
+globalThis.isLayerOutputSource=source=>img===source&&(layerAnalysisSkippedSources.has(source)||!!layerNativeSources.get(source)?.nativeProject);
+// A prepared layer preview is inert: it does not detach the current document,
+// invalidate its output, abort work, or revoke any URL before final success.
+const coexAtomicPreviews=new WeakSet(),coexAtomicSources=new WeakMap();
+const coexAtomicSettings=()=>JSON.stringify({settings:readCompositionSettings(),w:Number(wInput.value),h:Number(hInput.value),locked:ratioLock,aria:lockBtn.getAttribute('aria-checked')});
+globalThis.coexPrepareLayerSnapshotAtomic=async function(source,name,expectedContext,decision){
+ if(!source||source===img||coexAtomicSources.has(source)||!validDimensions(source.width,source.height)||expectedContext!==globalThis.getLayerOutputContextKey?.())throw Error('원본이나 출력 규격이 변경되었습니다.');
+ const w=source.width,h=source.height,type=fmtSelect.value,quality=Number(qInput.value)/100,settings=readCompositionSettings(),settingsKey=coexAtomicSettings(),outputGeneration=generation;if(!decision||decision.width!==w||decision.height!==h||decision.path!=='background-only')throw Error('레이어 크기 처리 결과를 확인할 수 없습니다.');
+ const claim={};coexAtomicSources.set(source,claim);
+ try{
+  if(Number(wInput.value)!==w||Number(hInput.value)!==h)throw Error('출력 규격이 변경되었습니다.');
+  const frame=document.createElement('canvas');frame.width=w;frame.height=h;let blob;
+  try{const ctx=frame.getContext('2d');if(!ctx)throw Error('미리보기 캔버스를 준비하지 못했습니다.');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';if(type==='image/jpeg'||!settings.transparent){ctx.fillStyle=settings.background||'#ffffff';ctx.fillRect(0,0,w,h);}ctx.drawImage(source,0,0);blob=await new Promise((resolve,reject)=>{try{frame.toBlob(b=>b?resolve(b):reject(Error('미리보기 인코딩 실패')),type,type==='image/png'?undefined:quality);}catch(e){reject(e)}});}finally{frame.width=frame.height=0;}
+  if(!blob||blob.type!==type||expectedContext!==globalThis.getLayerOutputContextKey?.()||generation!==outputGeneration||coexAtomicSettings()!==settingsKey||fmtSelect.value!==type||Number(qInput.value)/100!==quality)throw Error('원본이나 출력 설정이 변경되었습니다.');
+  const prepared={source,name,w,h,type,quality,blob,decision,expectedContext,settingsKey,outputGeneration};coexAtomicPreviews.add(prepared);coexAtomicSources.set(source,prepared);return prepared;
+ }catch(error){if(coexAtomicSources.get(source)===claim)coexAtomicSources.delete(source);throw error;}
+};
+globalThis.coexCommitLayerSnapshotAtomic=function(prepared){
+ if(!coexAtomicPreviews.has(prepared)||prepared.expectedContext!==globalThis.getLayerOutputContextKey?.()||generation!==prepared.outputGeneration||coexAtomicSettings()!==prepared.settingsKey||fmtSelect.value!==prepared.type||Number(qInput.value)/100!==prepared.quality)throw Error('원본이나 출력 설정이 변경되었습니다.');
+ const properties=[[$('origDims'),'textContent'],[$('origSize'),'textContent'],[$('origFormat'),'textContent'],[wInput,'value'],[hInput,'value'],[pctInput,'value'],[editor,'className'],[dropzone.style,'display'],[$('resDims'),'textContent'],[$('resSize'),'textContent'],[$('resDelta'),'textContent'],[$('downloadBtn'),'disabled'],[$('automaticPolicyStatus'),'textContent'],[$('status'),'textContent'],[$('status'),'hidden'],[$('status'),'className']];
+ const saved=properties.map(([object,key])=>({object,key,value:object[key]})),oldPreviewSrc=previewImg.getAttribute('src');
+ const previousStatus={key:statusKey,error:statusError},oldUrl=lastUrl;
+ let nextUrl=null;
+ try{
+  nextUrl=URL.createObjectURL(prepared.blob);
+  if(prepared.expectedContext!==globalThis.getLayerOutputContextKey?.())throw Error('원본이 변경되었습니다.');
+  $('origDims').textContent=prepared.w+' × '+prepared.h+' px';$('origSize').textContent='—';$('origFormat').textContent='편집 레이어 유지';
+  wInput.value=prepared.w;hInput.value=prepared.h;pctInput.value='100';editor.classList.add('show');dropzone.style.display='none';
+  $('resDims').textContent=prepared.w+' × '+prepared.h+' px';$('resSize').textContent=fmtBytes(prepared.blob.size);$('resDelta').textContent='';previewImg.src=nextUrl;$('downloadBtn').disabled=false;
+  $('automaticPolicyStatus').textContent=globalThis.coexAutoResizePolicy.describe(prepared.decision);status(prepared.decision?.status==='review'?'autoReview':'ready',prepared.decision?.status==='review');
+ }catch(error){
+  // None of the current document or preview resources has been revoked here.
+  for(const item of saved.reverse())try{item.object[item.key]=item.value;}catch{}try{if(oldPreviewSrc===null)previewImg.removeAttribute('src');else previewImg.setAttribute('src',oldPreviewSrc);}catch{}
+  statusKey=previousStatus.key;statusError=previousStatus.error;if(nextUrl)URL.revokeObjectURL(nextUrl);throw error;
+ }
+ // The document session and its slide controls remain live; only the old preview URL is retired after success.
+ coexAtomicPreviews.delete(prepared);coexAtomicSources.delete(prepared.source);++loadGeneration;++generation;clearTimeout(renderTimer);
+ img=prepared.source;natW=prepared.w;natH=prepared.h;origName=prepared.name||'layer-project';origBytes=0;lastBlob=prepared.blob;lastUrl=nextUrl;layerAnalysisSkippedSources.add(img);globalThis.coexLastOutputDecision=prepared.decision;
+ try{if(oldUrl)URL.revokeObjectURL(oldUrl);}catch{}try{if(typeof cancelBatch==='function')cancelBatch();}catch{}try{globalThis.coexAutoResizePolicy?.record(prepared.blob,prepared.decision);}catch{}try{updateDocumentLabels();}catch{}try{showOutputCompatibility();}catch{}
+ return globalThis.getLayerOutputContextKey?.();
+};
+
+globalThis.coexDiscardLayerSnapshotAtomic=function(prepared){if(!coexAtomicPreviews.has(prepared)||coexAtomicSources.get(prepared.source)!==prepared)return;coexAtomicPreviews.delete(prepared);coexAtomicSources.delete(prepared.source);if(prepared.source&&prepared.source!==img)prepared.source.width=prepared.source.height=0;};
+
+// Refresh preset labels and warnings after a successful scene commit without
+// changing the ratio lock or scheduling another raster render.
+globalThis.coexSetPresetMetadata=function(p){
+  if(p&&(Number(p.w)!==natW||Number(p.h)!==natH))return false;
+  try{activePreset=p||null;}catch{return false;}
+  try{renderPresetCards();}catch{}try{renderActiveInfo();}catch{}try{showOutputCompatibility();}catch{}
+  return true;
+};
+globalThis.acceptLayerSnapshot=function(source,name){
+  if(!validDimensions(source.width,source.height))throw Error('출력 크기를 확인해 주세요.');
+  clearDocument();++loadGeneration;invalidate();clearResult();
+  if(loadingUrl){URL.revokeObjectURL(loadingUrl);loadingUrl=null;}
+  layerAnalysisSkippedSources.add(source);img=source;natW=source.width;natH=source.height;origName=name||'layer-project';origBytes=0;
+  $('origDims').textContent=natW+' × '+natH+' px';$('origSize').textContent='—';$('origFormat').textContent='편집 레이어 유지';
+  wInput.value=natW;hInput.value=natH;pctInput.value='100';fmtSelect.value='image/png';syncQualityVisibility();
+  ratioLock=false;lockBtn.classList.remove('on');lockBtn.setAttribute('aria-checked','false');lockIcon.textContent='🔓';
+  editor.classList.add('show');dropzone.style.display='none';scheduleRender();
+};
+
+// Stop pending loads when navigating back; keep the current document session available.
+globalThis.pauseWorkspaceLoad=()=>{
+ ++loadGeneration;++documentEpoch;++pageEpoch;
+ documentAbort?.abort();pageAbort?.abort();documentAbort=pageAbort=null;
+ if(loadingUrl){URL.revokeObjectURL(loadingUrl);loadingUrl=null;}
+ status('');
+};
+lang = detectLang(); applyI18n(); syncQualityVisibility();
+
+</script>
+<script src="./automatic-resize.js?v=main-background-20261101"></script>
+<script src="./sns-controls.js"></script>
+<script type="module" src="./layers.mjs?v=editor-preview-resume-20261110"></script>
+<script type="module" src="./auto-layers.mjs"></script>
+<script type="module" src="./responsive-layout.mjs?v=editor-preview-resume-20261110"></script>
+<script type="module" src="./workspace-controls.mjs"></script>
+<script type="module" src="./design-candidates.mjs"></script>
+<script type="module" src="./free-ai-design.mjs?v=compact-ai-help-20261101"></script>
+<script type="module" src="./design-targets.mjs"></script>
+<script type="module" src="./photo-design.mjs"></script>
+<script type="module" src="./output-preview-dock.mjs?v=near-preview-20261101"></script>
+<script type="module" src="./output-size-confirm.mjs?v=size-confirm-stable-20261101"></script>
+<script type="module" src="./photo-mask-import.mjs?v=photo-editable-20261101"></script>
+<script type="module" src="./photo-instance-import.mjs?v=support-lasso-20261109"></script>
+<script type="module" src="./instance-analysis.mjs?v=candidate-click-20261109"></script>
+<script type="module" src="./support-lasso.mjs?v=support-lasso-20261109"></script>
+<script type="module" src="./occlusion-repair.mjs?v=bread-cache-20261110"></script>
+<script type="module" src="./background-repair.mjs?v=openai-background-setup-20261109"></script>
+<script type="module" src="./instance-boundary.mjs?v=boundary-service-20261101"></script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+{
+  "source": "https://github.com/tesseract-ocr/tessdata_best",
+  "commit": "e12c65a915945e4c28e237a9b52bc4a8f39a0cec",
+  "license": "Apache-2.0",
+  "model": "Official Korean floating-point LSTM model; not a guarantee of accuracy",
+  "files": [
+    {
+      "file": "kor.traineddata",
+      "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_best/e12c65a915945e4c28e237a9b52bc4a8f39a0cec/kor.traineddata",
+      "bytes": 12528128,
+      "sha256": "f888d4038348a0c3d25151e7f452bda0d74ca275b18cab146798bcbb94084fff"
+    },
+    {
+      "file": "LICENSE",
+      "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_best/e12c65a915945e4c28e237a9b52bc4a8f39a0cec/LICENSE",
+      "bytes": 10173,
+      "sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9"
+    }
+  ],
+  "englishModel": "unchanged tessdata_fast eng copied for benchmark only",
+  "benchmark": [
+    {
+      "variant": "fast-kor",
+      "ms": 4833,
+      "expectedLines": 13,
+      "exactLines": 13,
+      "outputs": [
+        {
+          "sample": "reported-poster",
+          "text": "006× 2026 00108타17 코엑스 행사 / 0",
+          "missing": []
+        },
+        {
+          "sample": "mixed-poster",
+          "text": "코엑스 행사 서울 코엑스 전시장 행사 기간 2026년 10월 17일 무료 입장 사전 등록 @ | 기",
+          "missing": []
+        },
+        {
+          "sample": "small-type",
+          "text": "한글 인식 테스트 기간 장소 안내 서울 강남구 영동대로 513 공연 전시회 참가 신청",
+          "missing": []
+        },
+        {
+          "sample": "serif-poster",
+          "text": "문화 예술 전시회 작품과 사람의 만남 관람 시간 오전 열 시 코엑스에서 만나요 | 기",
+          "missing": []
+        }
+      ]
+    },
+    {
+      "variant": "best-kor",
+      "ms": 5860,
+      "expectedLines": 13,
+      "exactLines": 12,
+      "outputs": [
+        {
+          "sample": "reported-poster",
+          "text": "606 2026 0001086817 코엑스 행사 @ ~ 애",
+          "missing": []
+        },
+        {
+          "sample": "mixed-poster",
+          "text": "코엑스 행사 서울 코엑스 전시장 행사 기간 2026년 10월 17일 무료 입장 사전 등록 @ =",
+          "missing": []
+        },
+        {
+          "sample": "small-type",
+          "text": "한글 인식 테스트 기간 장소 안내 서울 강남구 영통대로 513 공연 전시회 참가 신청",
+          "missing": [
+            "서울 강남구 영동대로 513"
+          ]
+        },
+        {
+          "sample": "serif-poster",
+          "text": "문화 예술 전시회 작품과 사람의 만남 관람 시간 오전 열 시 코엑스에서 만나요 =",
+          "missing": []
+        }
+      ]
+    },
+    {
+      "variant": "fast-mixed",
+      "ms": 6759,
+      "expectedLines": 13,
+      "exactLines": 12,
+      "outputs": [
+        {
+          "sample": "reported-poster",
+          "text": "COEX 2026 OCTOBER 17 AWA 행사 © 0",
+          "missing": [
+            "코엑스 행사"
+          ]
+        },
+        {
+          "sample": "mixed-poster",
+          "text": "코엑스 행사 서울 코엑스 전시장 행사 기간 2026년 10월 17일 무료 입장 사전 등록 @ | 기",
+          "missing": []
+        },
+        {
+          "sample": "small-type",
+          "text": "한글 인식 테스트 기간 장소 안내 서울 강남구 영동대로 513 공연 전시회 참가 신청",
+          "missing": []
+        },
+        {
+          "sample": "serif-poster",
+          "text": "문화 예술 전시회 작품과 사람의 만남 관람 시간 오전 열 시 코엑스에서 만나요 | 기",
+          "missing": []
+        }
+      ]
+    },
+    {
+      "variant": "best-kor-fast-eng",
+      "ms": 7790,
+      "expectedLines": 13,
+      "exactLines": 12,
+      "outputs": [
+        {
+          "sample": "reported-poster",
+          "text": "COEX 2026 OCTOBER 17 코엑스 행사 © =",
+          "missing": []
+        },
+        {
+          "sample": "mixed-poster",
+          "text": "코엑스 행사 서울 코엑스 전시장 행사 기간 2026년 10월 17일 무료 입장 사전 등록 © a",
+          "missing": []
+        },
+        {
+          "sample": "small-type",
+          "text": "한글 인식 테스트 기간 장소 안내 서울 강남구 영통대로 513 공연 전시회 참가 신청",
+          "missing": [
+            "서울 강남구 영동대로 513"
+          ]
+        },
+        {
+          "sample": "serif-poster",
+          "text": "문화 예술 전시회 작품과 사람의 만남 관람 시간 오전 열 시 코엑스에서 만나요 =",
+          "missing": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+export function typography(role,short){const u=short/1080,key=['name','price','brand'].includes(role)?role:role==='logo'?'info':role==='details'?'info':role==='title'?'title':'body';const values={title:[.15,90],name:[.04,34],price:[.04,34],brand:[.04,34],body:[.033,30],info:[.028,26]};return{target:short*values[key][0],minimum:values[key][1]*u,role:key};}
+export function effectiveTextMinimum(o){const base=o.fontSize||0,fonts=[base,...Object.values(o.styles||{}).flatMap(row=>Object.values(row).map(s=>s.fontSize).filter(n=>Number.isFinite(n)&&n>0))];return Math.min(...fonts)*Math.abs(o.scaleY||1);}
+export const typographyRole=(node,role=node.role)=>node.manualRole||node.catalogRole||(role==='title'?'title':node.information?.includes('price')?'price':role);

@@ -1,0 +1,8 @@
+Local resizing analysis dependencies
+
+RgbQuant.js 1.1.2 (Leon Sorokin) - MIT. ESM wrapper only; analysis sample only, no reduce/dither of protected assets.
+Culori 4.0.2 (Dan Burzo and contributors) - MIT. Also retain src/okhsl LICENSE supplied by npm package.
+OpenType.js 2.0.0 - MIT. Original bundled source/comments retained, including tiny-inflate.
+
+Exact npm tarball URLs, integrity values, code and license SHA256: vendor-lock.json. No npm lifecycle scripts were executed.
+No model or font binaries are included in these dependencies. Font/model licenses remain separate.

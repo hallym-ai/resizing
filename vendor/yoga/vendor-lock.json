@@ -1,0 +1,91 @@
+{
+  "name": "yoga-layout",
+  "version": "3.2.1",
+  "license": "MIT",
+  "source": "https://github.com/react/yoga",
+  "archive": "https://registry.npmjs.org/yoga-layout/-/yoga-layout-3.2.1.tgz",
+  "npm_integrity": "sha512-0LPOt3AxKqMdFBZA3HBAt/t/8vIKq7VaQYbuA8WxCgung+p9TVyKRYdpvCb80HcdTN2NkbIKbhNwKUfm3tQywQ==",
+  "files": [
+    {
+      "path": "README.md",
+      "size_bytes": 885,
+      "sha256": "de3bc6065b0801b9b8d8e174688261e90322b5b22bd4397934bb4f83d80ff3bd"
+    },
+    {
+      "path": "package.json",
+      "size_bytes": 1600,
+      "sha256": "4b82c23413f756473143be7a2ce04bca9d1f2b43a4348098a8de19f63a0adda8"
+    },
+    {
+      "path": "dist/binaries/yoga-wasm-base64-esm.js",
+      "size_bytes": 120919,
+      "sha256": "2cfeda49ae87f57bcd4a5fe433940edefc531a69bd0f83e32759fb5837df205c"
+    },
+    {
+      "path": "dist/src/index.d.ts",
+      "size_bytes": 410,
+      "sha256": "753b64b831aa731751b352e7bc9ef4d95b8c25df769dd629f8ec6a84478a85c7"
+    },
+    {
+      "path": "dist/src/index.js",
+      "size_bytes": 489,
+      "sha256": "0c89ff0c01ee90b081b369119f972d72f71eb8882263d94ef0824500817d5de1"
+    },
+    {
+      "path": "dist/src/index.js.map",
+      "size_bytes": 934,
+      "sha256": "47b9a274b7c2dd5d18f9134c389c0acc919dce80e9d9536b8875ce9ed09aa3bc"
+    },
+    {
+      "path": "dist/src/load.d.ts",
+      "size_bytes": 420,
+      "sha256": "66c5d8e45c122a72a672582e9ce01e4b71217e6309ba70bf990c00f305661716"
+    },
+    {
+      "path": "dist/src/load.js",
+      "size_bytes": 508,
+      "sha256": "87c293f7926ccaabbd1026c3dce86326fa9ce02e9b216781b84b6431825b5df4"
+    },
+    {
+      "path": "dist/src/load.js.map",
+      "size_bytes": 980,
+      "sha256": "4ce0f9ea380a553bc0d9f15b11567ec6e4fbbd247e8d853569b53bcb23b9e403"
+    },
+    {
+      "path": "dist/src/wrapAssembly.d.ts",
+      "size_bytes": 6171,
+      "sha256": "5c187cdbece8ad89247f507b3f6b04aad849d4b3fd8108289e19e9d452714882"
+    },
+    {
+      "path": "dist/src/wrapAssembly.js",
+      "size_bytes": 4782,
+      "sha256": "b9615fdf7bc03e9014a25f478dd3004e231f28c11968b6e5668aee5cb390ff19"
+    },
+    {
+      "path": "dist/src/wrapAssembly.js.map",
+      "size_bytes": 15620,
+      "sha256": "2979248f95f0854f364c8bbc1998705fd19f4347d374e0f92ed9d5f2ae950944"
+    },
+    {
+      "path": "dist/src/generated/YGEnums.d.ts",
+      "size_bytes": 4395,
+      "sha256": "e0c394ad75777f77b761a10d69c0c9f9dd7afb04c910758dcb0a50bcaae08527"
+    },
+    {
+      "path": "dist/src/generated/YGEnums.js",
+      "size_bytes": 8084,
+      "sha256": "f9cdfa4247cf5954c0323c2edcb0190320014251afb5197d9935c1dc3e2d0fc6"
+    },
+    {
+      "path": "dist/src/generated/YGEnums.js.map",
+      "size_bytes": 12487,
+      "sha256": "81f214d6ee82b91986211dbd895a11cfae591ec8f4b9df643a1385c018669bec"
+    },
+    {
+      "path": "LICENSE",
+      "size_bytes": 1086,
+      "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85",
+      "source": "https://raw.githubusercontent.com/react/yoga/v3.2.1/LICENSE"
+    }
+  ]
+}

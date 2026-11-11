@@ -1,0 +1,104 @@
+[
+  {
+    "name": "culori",
+    "version": "4.0.2",
+    "license": "MIT",
+    "repository": {
+      "url": "git+ssh://git@github.com/Evercoder/culori.git",
+      "type": "git"
+    },
+    "tarball": "https://registry.npmjs.org/culori/-/culori-4.0.2.tgz",
+    "integrity": "sha512-1+BhOB8ahCn4O0cep0Sh2l9KCOfOdY+BXJnKMHFFzDEouSr/el18QwXEMRlOj9UY5nCeA8UN3a/82rUWRBeyBw==",
+    "sha256": "f9764df4e6f910458b80641202346c5be5d9457b92805f6b87491b1c2df6cfe5",
+    "licenses": [
+      "culori-LICENSE",
+      "culori-src-okhsl-LICENSE"
+    ],
+    "licenseSource": "npm tarball",
+    "selected": "culori.mjs",
+    "files": {
+      "culori.mjs": {
+        "bytes": 63630,
+        "sha256": "09dc0be3088b19c120af9e7cad015236268b6b5e2a0f2a8d23ffed7b0d57326c"
+      },
+      "culori-LICENSE": {
+        "bytes": 1066,
+        "sha256": "5e9ac3317f048184d001bd3814aed28d4874bdcac9da1d001465e52e1a0e8077"
+      },
+      "culori-src-okhsl-LICENSE": {
+        "bytes": 1058,
+        "sha256": "e067a4172d65fec27db56ccee8eb0cc5b2483abc4865acebe64b25240fdbd53c"
+      }
+    }
+  },
+  {
+    "name": "rgbquant",
+    "version": "1.1.2",
+    "license": null,
+    "repository": {
+      "url": "git://github.com/leeoniya/RgbQuant.js.git",
+      "type": "git"
+    },
+    "tarball": "https://registry.npmjs.org/rgbquant/-/rgbquant-1.1.2.tgz",
+    "integrity": "sha512-AGuKVeUUFW5rhm4Eu/7SXQRSxs3MoXIGKP4i/5Rok89QBrOu9+ytWezuxHhCsHT9Y6z+sGPKL9PKo6X8tZNUaw==",
+    "sha256": "873ae66d76897bfe1fc3b01553df1b32093ff2767cddd854feb0e946a96e720c",
+    "licenses": [
+      "rgbquant-LICENSE"
+    ],
+    "licenseSource": "https://raw.githubusercontent.com/leeoniya/RgbQuant.js/dd80ef94c2256eb0af4b8451b3f5c4e1b5a70988/LICENSE",
+    "selected": "rgbquant-original.js",
+    "files": {
+      "rgbquant-original.js": {
+        "bytes": 22626,
+        "sha256": "f32eff3cdc255aac2dccfb3ea31204647fd94b49cb2a615e67ba5db0d924e2bd"
+      },
+      "rgbquant-LICENSE": {
+        "bytes": 1078,
+        "sha256": "b8fcae482b3d93c13d7591b16e8e314803eeb19146a4f2f3542f15736f602995"
+      },
+      "rgbquant.mjs": {
+        "bytes": 22784,
+        "sha256": "4fc8e03849a385ba7d78cf12925875ad95d91fd379bde5ccea96e0ca805cf3ab"
+      }
+    },
+    "adapter": "ESM wrapper export; original algorithm unchanged. license from upstream fixed LICENSE commit; npm tarball omitted the standalone license file."
+  },
+  {
+    "name": "opentype.js",
+    "version": "2.0.0",
+    "license": "MIT",
+    "repository": {
+      "url": "git://github.com/opentypejs/opentype.js.git",
+      "type": "git"
+    },
+    "tarball": "https://registry.npmjs.org/opentype.js/-/opentype.js-2.0.0.tgz",
+    "integrity": "sha512-kCyjv6xdDY1W/jLWZ/L3QhhTlKUqDZMQ5+Jdlw12b3dXkKNpYBqqlMMj0YDQPShWFTMwgZI1hG14kN3XUDSg/A==",
+    "sha256": "ce143186092cc57dc8238288611cad7b383076b581d8a85f99f8f163b780c7ad",
+    "licenses": [
+      "opentype-js-LICENSE",
+      "opentype-tiny-inflate-LICENSE"
+    ],
+    "licenseSource": "npm tarball",
+    "selected": "opentype.mjs",
+    "files": {
+      "opentype.mjs": {
+        "bytes": 494695,
+        "sha256": "e139522ac432bb38fb4878d772012f0ad351993c36d7815d65a9890fb3fe68fb"
+      },
+      "opentype-js-LICENSE": {
+        "bytes": 1085,
+        "sha256": "a5b87c9bc191e7f9c06b07bd7cbbed3ed846dfdb50e859484b2c245aa1ab2e61"
+      },
+      "opentype-tiny-inflate-LICENSE": {
+        "bytes": 1077,
+        "sha256": "c0df7f551401f8f80197ff31bf69b8cd23727d127423403282514d242a3ab132"
+      }
+    },
+    "bundledThirdParty": {
+      "name": "tiny-inflate",
+      "version": "1.0.3",
+      "license": "MIT",
+      "licenseSource": "https://registry.npmjs.org/tiny-inflate/-/tiny-inflate-1.0.3.tgz"
+    }
+  }
+]

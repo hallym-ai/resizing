@@ -1,0 +1,134 @@
+{
+  "model": "BiRefNet_lite-512",
+  "repository": "studioludens/birefnet-lite-512",
+  "revision": "962e67969ec6acec9c19fab76acee4f5e22e990c",
+  "precision": "fp32",
+  "bytes": 191877254,
+  "sha256": "1cb0fb360dadd15af77c639085d77a9df67db0c64315560c3de005f676345ac2",
+  "inputSize": 512,
+  "chunks": [
+    {
+      "path": "web512-fp32-00.bin.gz",
+      "bytes": 3482804,
+      "sha256": "3281814ef98d03ab1b814af6ad9842462a2508a6b6ac0a4c80b0360c75ef1270",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "4b991d232b2e74be944272da56ffc4a33900c70ed71fea63e2cd8fb91dc415a6"
+    },
+    {
+      "path": "web512-fp32-01.bin.gz",
+      "bytes": 15535554,
+      "sha256": "ef954b1027f03704e221235dc309ecdeb5736fb1f1cc76b64c873b9b837f42ba",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "e76cf8d842cef824e4d9a619db7a746d64dc76235c9adea83cbd7c5940124e16"
+    },
+    {
+      "path": "web512-fp32-02.bin.gz",
+      "bytes": 15531052,
+      "sha256": "5fb00849e7d7c83e0013fec7432fab13ed664febc6d80d1068f568461e6652c3",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "90922dc28d339ddd24d036a3a17ddc798e2718610a70a9fda2b6f917149cb98d"
+    },
+    {
+      "path": "web512-fp32-03.bin.gz",
+      "bytes": 15517970,
+      "sha256": "04d3fb704e528a8a552309e1cbb52c122560a5ff56d56c52153acc66ddf0fe74",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "e5045899e0a627456107570781da3cacb00b47cad46dd6ec3ed303bf59fdf146"
+    },
+    {
+      "path": "web512-fp32-04.bin.gz",
+      "bytes": 15455840,
+      "sha256": "8ac025385e15c22f0a74b7cfd288fd3c7ce44517745d89311125ec871554243a",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "05e0daf25b6eeb86ebd249b6f559b6ae488baeda70fa2938ea360a6c28534af6"
+    },
+    {
+      "path": "web512-fp32-05.bin.gz",
+      "bytes": 15317815,
+      "sha256": "ce1237cf615e5633a7442c8179b75231bb764dbdc5e2ee0c32bbca47e79811ca",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "bf1ecf9f87053ccbe9a93f9a5e1a6e97a2e96336e412123772eccfe504d7a6ee"
+    },
+    {
+      "path": "web512-fp32-06.bin.gz",
+      "bytes": 15353544,
+      "sha256": "3f091698d31f48f1cb9afaa5e90518da5308395bccc3fdb73f46b4e96738ac91",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "c2a611e003c8edab41f90b921acb553e7c14e05021149d5f8c276dec65e67aff"
+    },
+    {
+      "path": "web512-fp32-07.bin.gz",
+      "bytes": 15354448,
+      "sha256": "57f3c242cdb8c8c4218f80e1aace126ddcd15b3b1dac5e445a21c01691baf5f4",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "1152001bd224ac7b6a71a8df3032b23301bc993fbbc547c44feb368ffd134b78"
+    },
+    {
+      "path": "web512-fp32-08.bin.gz",
+      "bytes": 15352523,
+      "sha256": "326b2a23c2aabd8e32652e25af14ac355a841765cb2d0ca91ecf0cbfae4a7b00",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "bf900c39ba6f361a57f6b2c14adf6dbffe63e4f67ea85ac87bfebdc26f3df592"
+    },
+    {
+      "path": "web512-fp32-09.bin.gz",
+      "bytes": 15546743,
+      "sha256": "a95ea61465688a19b05bc47e494d3ba580edf24c72e8eff1a9bdd31c957d9855",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "b2df7e8fe1617c4bced561b7813918197fbdfe71bb8caede98a713aa76287458"
+    },
+    {
+      "path": "web512-fp32-10.bin.gz",
+      "bytes": 15338839,
+      "sha256": "966eeb2b30a31ecb4ebf31e3325f90b7010933d20bc49e4114fab1cc35ad8930",
+      "compression": "gzip",
+      "rawBytes": 16777216,
+      "rawSha256": "392c66966209a853df4b05bfcbcb5aa1ce274afef8a7950e3d13e03ff2dca329"
+    },
+    {
+      "path": "web512-fp32-11.bin.gz",
+      "bytes": 6784907,
+      "sha256": "3a6c9d2d4c0b2ff6419041cc03163d7cca1090f30a6bb5a7e726e70e144f74dc",
+      "compression": "gzip",
+      "rawBytes": 7327878,
+      "rawSha256": "8ad819557ea7318fe1ba4287ba1c5d0aa0e28da0b4f86f26ae9e5feb3f5ce037"
+    }
+  ],
+  "preprocess": {
+    "do_normalize": true,
+    "do_rescale": true,
+    "do_resize": true,
+    "feature_extractor_type": "ViTFeatureExtractor",
+    "image_mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "image_processor_type": "ViTFeatureExtractor",
+    "image_std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "resample": 2,
+    "rescale_factor": 0.00392156862745098,
+    "size": {
+      "height": 512,
+      "width": 512
+    }
+  },
+  "license": "MIT",
+  "source": "https://huggingface.co/studioludens/birefnet-lite-512/resolve/962e67969ec6acec9c19fab76acee4f5e22e990c/onnx/model.onnx",
+  "transport": "gzip-chunks",
+  "transportBytes": 164572039
+}

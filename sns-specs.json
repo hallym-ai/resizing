@@ -1,0 +1,1739 @@
+{
+  "checkedAt": "2026-10-17",
+  "sources": {
+    "meta": {
+      "name": "Instagram 사진 도움말 / Meta 광고 가이드",
+      "url": "https://help.instagram.com/1631821640426723",
+      "status": "limited",
+      "note": "공식 원문이 접근 제한되어 현재 권장 픽셀을 재확인하지 못함. 아래 항목은 작업용 캔버스이며 공식 의무 규격이 아님."
+    },
+    "fb": {
+      "name": "Facebook 페이지 프로필·커버 도움말",
+      "url": "https://www.facebook.com/help/125379114252045",
+      "status": "limited",
+      "note": "공식 원문 접근 제한. 이 링크로 모든 게시물·스토리·이벤트의 규격이 검증된 것은 아님. 항목들은 작업용 예시이며 기기별 잘림과 실제 게재 조건 재확인 필요."
+    },
+    "threads": {
+      "name": "Meta Threads 광고 포맷 안내",
+      "url": "https://about.fb.com/br/news/2026/01/anuncios-no-threads-um-ano-depois-agora-alcancando-todos-os-usuarios-e-mercados-globalmente/",
+      "status": "verified",
+      "note": "Threads 광고의 4:5 지원을 확인. 1080×1350은 이 비율의 환산 예시이며 일반 게시물의 공식 권장 픽셀이 아님."
+    },
+    "yt": {
+      "name": "YouTube 맞춤 미리보기 이미지",
+      "url": "https://support.google.com/youtube/answer/72431?hl=en",
+      "status": "verified",
+      "note": "일반 영상 3840×2160, Shorts 2160×3840 권장. 모바일 영상 썸네일 2MB/팟캐스트 10MB, 데스크톱 50MB. 팟캐스트는 1:1."
+    },
+    "ytBrand": {
+      "name": "YouTube 채널 브랜딩",
+      "url": "https://support.google.com/youtube/answer/10456525?hl=en",
+      "status": "verified",
+      "note": "배너 권장2560×1440/최소2048×1152/6MB. 최소 크기의 중요 내용 안전 영역1235×338. 프로필 표시98×98, 워터마크 최소150×150."
+    },
+    "ytAds": {
+      "name": "Google Ads 동영상 썸네일",
+      "url": "https://support.google.com/google-ads/answer/13547298?hl=en-AU",
+      "status": "verified",
+      "note": "광고용 썸네일1280×720와 companion 배너300×60. 일반 영상 최신 썸네일 권장과 구분."
+    },
+    "xProfile": {
+      "name": "X 프로필 이미지 문제 해결",
+      "url": "https://help.x.com/en/managing-your-account/common-issues-when-uploading-profile-photo",
+      "status": "verified",
+      "note": "프로필400×400, 헤더1500×500 권장. 프로필2MB. 헤더는 기기별 잘림에 유의."
+    },
+    "xAds": {
+      "name": "X 광고 소재 규격",
+      "url": "https://help.x.com/en/business-and-advertising/creative-ad-specifications",
+      "status": "verified",
+      "note": "800×418/800×800 권장 및 추가 지원비율의 픽셀 예시. 일반 사진 게시물의 공식 필수규격으로 간주하지 않음."
+    },
+    "liProfile": {
+      "name": "LinkedIn 프로필 이미지",
+      "url": "https://www.linkedin.com/help/linkedin/answer/a549049?lang=en",
+      "status": "verified",
+      "note": "프로필400×400 최소, 개인배경1584×396 권장. 최대8MB."
+    },
+    "liPage": {
+      "name": "LinkedIn Page·Career Page 이미지",
+      "url": "https://www.linkedin.com/help/linkedin/answer/a563309/image-specifications-for-your-linkedin-pages-and-career-pages",
+      "status": "verified",
+      "note": "회사커버1512×256, 로고400×400, Life1128×376/502×282/900×600. URL 포함 Page 게시물1200×627. 최대3MB."
+    },
+    "liAds": {
+      "name": "LinkedIn 단일 이미지 광고",
+      "url": "https://www.linkedin.com/help/linkedin/answer/a426534",
+      "status": "verified",
+      "note": "광고1200×628/1200×1200/720×900 권장. 최대5MB. 세로는 모바일 게재."
+    },
+    "tik": {
+      "name": "TikTok Carousel 광고 규격",
+      "url": "https://ads.tiktok.com/resources/help/article/specifications-for-carousel-ads",
+      "status": "verified",
+      "note": "2026-08 문서의 광고 명시 해상도1200×628/640×640/720×1280. 100KB 이하 권장, 음악 등 기타 요건은 별도."
+    },
+    "pin": {
+      "name": "Pinterest 광고·이미지 Pin 규격",
+      "url": "https://help.pinterest.com/en-gb/business/article/pinterest-product-specs",
+      "status": "verified",
+      "note": "Standard1000×1500 권장, Carousel1:1 또는2:3. Idea1080×1920 권장. 데스크톱20MB/앱32MB."
+    },
+    "pinCover": {
+      "name": "Pinterest 비즈니스 프로필 커버",
+      "url": "https://help.pinterest.com/en/business/article/personalize-your-profile",
+      "status": "verified",
+      "note": "800×450 최소,16:9 권장."
+    },
+    "naver": {
+      "name": "네이버 블로그 타이틀 이미지",
+      "url": "https://help.naver.com/service/5593/contents/15274?lang=ko&osType=PC",
+      "status": "verified",
+      "note": "PC 가로966px, 높이50~600px 등록범위. 966×300은 앱에서 선택한 작업 예시. 20MB 미만, 영문·숫자 파일명 필요."
+    },
+    "naverAds": {
+      "name": "네이버 광고 2025 이미지 제작 규격 공지",
+      "url": "https://ads.naver.com/notice/18556",
+      "status": "historical",
+      "note": "2025-02-06 시행 공지 기준. 2026 최신 전체규격 확정값이 아니므로 집행 전에 최신 가이드(https://ads.naver.com/adguide/1480) 재확인. 최소 용량도 있음."
+    },
+    "kakao": {
+      "name": "카카오비즈니스 채널 프로필",
+      "url": "https://kakaobusiness.gitbook.io/main/partner/smb/channel/step1/profile",
+      "status": "verified",
+      "note": "채널 프로필640×640 권장. 브랜드카드16:9/1:1/3:4 비율 권장. 개인 카카오톡 프로필 규격과 다름."
+    },
+    "kakaoMessage": {
+      "name": "카카오 채널 메시지",
+      "url": "https://kakaobusiness.gitbook.io/main/channel/run/message",
+      "status": "verified",
+      "note": "와이드이미지800×600, 캐러셀커머스 인트로800×1100/상품800×800 권장."
+    },
+    "snap": {
+      "name": "Snapchat 광고 포맷",
+      "url": "https://forbusiness.snapchat.com/advertising/ad-formats",
+      "status": "verified",
+      "note": "Single Image/Story/Sponsored Snap720×1280, 채팅 배경1080×1920, 정적 필터945×2048. 동영상 파일 생성은 지원하지 않음."
+    },
+    "twitch": {
+      "name": "Twitch 채널 페이지 / 계정 설정",
+      "url": "https://help.twitch.tv/s/article/channel-page-setup?language=it",
+      "status": "verified",
+      "note": "프로필 배너1200×480 권장. 계정설정 문서의 프로필256×256. PNG/JPG,10MB."
+    },
+    "twitchProfile": {
+      "name": "Twitch 계정 설정",
+      "url": "https://help.twitch.tv/s/article/twitch-account-settings?language=fi",
+      "status": "verified",
+      "note": "프로필256×256, 프로필배너1200×480, 최대10MB."
+    },
+    "discord": {
+      "name": "Discord Custom Profiles",
+      "url": "https://support.discord.com/hc/en-us/articles/4403147417623-Custom-Profiles",
+      "status": "verified",
+      "note": "사용자 배너680×240 최소. Nitro 필요. 서버별 프로필 배너와 구분."
+    },
+    "discordServer": {
+      "name": "Discord Per-Server Profiles",
+      "url": "https://support.discord.com/hc/en-us/articles/4409388345495-Per-Server-Profiles",
+      "status": "verified",
+      "note": "서버별 프로필 배너600×240 권장최소. Nitro,PNG/JPG,10MB 미만."
+    },
+    "bsky": {
+      "name": "Bluesky 게시물 작성 API",
+      "url": "https://docs.bsky.app/docs/tutorials/creating-a-post",
+      "status": "verified",
+      "note": "공식 문서는 이미지당2MB와 임의 aspectRatio를 설명. 프리셋 픽셀은 앱의 작업 예시이며 공식 고정 권장 크기가 아님."
+    },
+    "common": {
+      "name": "공통 작업 캔버스",
+      "url": null,
+      "status": "working",
+      "note": "범용 제작 편의를 위한 비율·픽셀 예시. 특정 플랫폼의 공식 규정이 아님."
+    },
+    "banner": {
+      "name": "범용 배너 작업 크기",
+      "url": null,
+      "status": "working",
+      "note": "제작 편의를 위한 가로·세로 배너 예시입니다. 특정 플랫폼의 공식 의무 규격이 아닙니다."
+    },
+    "contactBrief": {
+      "name": "담당자 전달 제작 규격",
+      "status": "user-provided",
+      "note": "2026-10-27 사용자가 전달한 이번 작업의 제작 기준입니다. 플랫폼 전체의 공식 규격으로 표시하지 않습니다. 뉴스레터·블로그·홈페이지 배너는 고정 규격 없이 자유 크기로 제작합니다."
+    }
+  },
+  "presets": [
+    {
+      "id": "brief-ig-feed",
+      "platform": "담당자 규격",
+      "name": {
+        "ko": "인스타그램 피드",
+        "en": "Instagram feed"
+      },
+      "w": 1080,
+      "h": 1440,
+      "basis": "brief",
+      "source": "contactBrief",
+      "checkedAt": "2026-10-27",
+      "note": "담당자 전달 기준. 이번 작업의 납품 규격입니다."
+    },
+    {
+      "id": "brief-ig-story",
+      "platform": "담당자 규격",
+      "name": {
+        "ko": "인스타그램 스토리",
+        "en": "Instagram Story"
+      },
+      "w": 1080,
+      "h": 1920,
+      "basis": "brief",
+      "source": "contactBrief",
+      "checkedAt": "2026-10-27",
+      "note": "위아래 각 250px는 데드존입니다. 제목·로고·가격·날짜·연락처 등 중요 내용은 y=250~1670px 안에 배치하세요. 현재 이 표시는 확인 안내이며 자동 배치 보호를 보장하지 않습니다.",
+      "safeArea": {
+        "top": 250,
+        "bottom": 250,
+        "left": 0,
+        "right": 0,
+        "mode": "advisory"
+      }
+    },
+    {
+      "id": "brief-ig-reel-thumbnail",
+      "platform": "담당자 규격",
+      "name": {
+        "ko": "인스타그램 릴스 썸네일",
+        "en": "Instagram Reels thumbnail"
+      },
+      "w": 1080,
+      "h": 1350,
+      "basis": "brief",
+      "source": "contactBrief",
+      "checkedAt": "2026-10-27",
+      "note": "담당자 전달 기준. 이번 작업의 납품 규격입니다."
+    },
+    {
+      "id": "brief-kakao-news",
+      "platform": "담당자 규격",
+      "name": {
+        "ko": "카카오 플친 소식탭",
+        "en": "Kakao channel news"
+      },
+      "w": 1080,
+      "h": 1080,
+      "basis": "brief",
+      "source": "contactBrief",
+      "checkedAt": "2026-10-27",
+      "note": "담당자 전달 기준. 이번 작업의 납품 규격입니다."
+    },
+    {
+      "id": "ig-square",
+      "platform": "Instagram",
+      "name": {
+        "ko": "피드 정사각",
+        "en": "Square feed"
+      },
+      "w": 1080,
+      "h": 1080,
+      "basis": "working",
+      "source": "meta",
+      "note": "원문 접근 제한. 업로드 화면의 허용 비율·크롭을 확인하세요.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "ig-portrait",
+      "platform": "Instagram",
+      "name": {
+        "ko": "피드 세로 4:5",
+        "en": "Portrait feed 4:5"
+      },
+      "w": 1080,
+      "h": 1350,
+      "basis": "working",
+      "source": "meta",
+      "note": "원문 접근 제한. 업로드 화면의 허용 비율·크롭을 확인하세요.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "ig-photo-3-4",
+      "platform": "Instagram",
+      "name": {
+        "ko": "사진 세로 3:4",
+        "en": "Portrait photo 3:4"
+      },
+      "w": 1080,
+      "h": 1440,
+      "basis": "working",
+      "source": "meta",
+      "note": "원문 접근 제한. 업로드 화면의 허용 비율·크롭을 확인하세요.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "ig-landscape",
+      "platform": "Instagram",
+      "name": {
+        "ko": "피드 가로",
+        "en": "Landscape feed"
+      },
+      "w": 1080,
+      "h": 566,
+      "basis": "working",
+      "source": "meta",
+      "note": "원문 접근 제한. 업로드 화면의 허용 비율·크롭을 확인하세요.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "ig-story",
+      "platform": "Instagram",
+      "name": {
+        "ko": "스토리",
+        "en": "Story"
+      },
+      "w": 1080,
+      "h": 1920,
+      "basis": "working",
+      "source": "meta",
+      "note": "원문 접근 제한. 업로드 화면의 허용 비율·크롭을 확인하세요.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "ig-reel-cover",
+      "platform": "Instagram",
+      "name": {
+        "ko": "릴스 커버 작업용",
+        "en": "Reel cover artwork"
+      },
+      "w": 1080,
+      "h": 1920,
+      "basis": "working",
+      "source": "meta",
+      "note": "원문 접근 제한. 업로드 화면의 허용 비율·크롭을 확인하세요.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "ig-profile",
+      "platform": "Instagram",
+      "name": {
+        "ko": "프로필 작업용",
+        "en": "Profile artwork"
+      },
+      "w": 400,
+      "h": 400,
+      "basis": "working",
+      "source": "meta",
+      "note": "원문 접근 제한. 업로드 화면의 허용 비율·크롭을 확인하세요.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "fb-square",
+      "platform": "Facebook",
+      "name": {
+        "ko": "피드 정사각",
+        "en": "Square feed"
+      },
+      "w": 1080,
+      "h": 1080,
+      "basis": "working",
+      "source": "fb",
+      "note": "공식 원문 확인 제한. 커버·이벤트는 기기별 잘림에 유의.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "fb-portrait",
+      "platform": "Facebook",
+      "name": {
+        "ko": "피드 세로",
+        "en": "Portrait feed"
+      },
+      "w": 1080,
+      "h": 1350,
+      "basis": "working",
+      "source": "fb",
+      "note": "공식 원문 확인 제한. 커버·이벤트는 기기별 잘림에 유의.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "fb-link",
+      "platform": "Facebook",
+      "name": {
+        "ko": "링크 이미지 작업용",
+        "en": "Link artwork"
+      },
+      "w": 1200,
+      "h": 630,
+      "basis": "working",
+      "source": "fb",
+      "note": "공식 원문 확인 제한. 커버·이벤트는 기기별 잘림에 유의.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "fb-story",
+      "platform": "Facebook",
+      "name": {
+        "ko": "스토리",
+        "en": "Story"
+      },
+      "w": 1080,
+      "h": 1920,
+      "basis": "working",
+      "source": "fb",
+      "note": "공식 원문 확인 제한. 커버·이벤트는 기기별 잘림에 유의.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "fb-cover",
+      "platform": "Facebook",
+      "name": {
+        "ko": "페이지 커버 작업용",
+        "en": "Page cover artwork"
+      },
+      "w": 1640,
+      "h": 624,
+      "basis": "working",
+      "source": "fb",
+      "note": "공식 원문 확인 제한. 커버·이벤트는 기기별 잘림에 유의.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "fb-event",
+      "platform": "Facebook",
+      "name": {
+        "ko": "이벤트 커버 작업용",
+        "en": "Event cover artwork"
+      },
+      "w": 1920,
+      "h": 1005,
+      "basis": "working",
+      "source": "fb",
+      "note": "공식 원문 확인 제한. 커버·이벤트는 기기별 잘림에 유의.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "fb-profile",
+      "platform": "Facebook",
+      "name": {
+        "ko": "프로필 작업용",
+        "en": "Profile artwork"
+      },
+      "w": 400,
+      "h": 400,
+      "basis": "working",
+      "source": "fb",
+      "note": "공식 원문 확인 제한. 커버·이벤트는 기기별 잘림에 유의.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "threads-ad-portrait",
+      "platform": "Threads",
+      "name": {
+        "ko": "피드 광고 세로 4:5",
+        "en": "Feed ad portrait 4:5"
+      },
+      "w": 1080,
+      "h": 1350,
+      "basis": "ratio",
+      "source": "threads",
+      "note": "",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "threads-square",
+      "platform": "Threads",
+      "name": {
+        "ko": "정사각 작업용",
+        "en": "Square artwork"
+      },
+      "w": 1080,
+      "h": 1080,
+      "basis": "working",
+      "source": "common",
+      "note": "",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "threads-landscape",
+      "platform": "Threads",
+      "name": {
+        "ko": "가로 작업용",
+        "en": "Landscape artwork"
+      },
+      "w": 1200,
+      "h": 630,
+      "basis": "working",
+      "source": "common",
+      "note": "",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "yt-thumbnail-4k",
+      "platform": "YouTube",
+      "name": {
+        "ko": "영상 썸네일 4K",
+        "en": "Video thumbnail 4K"
+      },
+      "w": 3840,
+      "h": 2160,
+      "basis": "recommended",
+      "source": "yt",
+      "note": "모바일 영상2MB/데스크톱50MB. 아래2MB 경고는 모바일 기준.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 2097152,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "yt-shorts-4k",
+      "platform": "YouTube",
+      "name": {
+        "ko": "Shorts 썸네일 4K",
+        "en": "Shorts thumbnail 4K"
+      },
+      "w": 2160,
+      "h": 3840,
+      "basis": "recommended",
+      "source": "yt",
+      "note": "Shorts 썸네일 업로드는 YouTube Studio PC 기준. JPG/PNG·데스크톱50MB 한도.",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "maxBytes": 52428800
+    },
+    {
+      "id": "yt-ad-thumbnail",
+      "platform": "YouTube",
+      "name": {
+        "ko": "광고 썸네일",
+        "en": "Ad thumbnail"
+      },
+      "w": 1280,
+      "h": 720,
+      "basis": "recommended",
+      "source": "ytAds",
+      "note": "일반영상4K 권장과 구분.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 2097152,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "yt-banner",
+      "platform": "YouTube",
+      "name": {
+        "ko": "채널 배너",
+        "en": "Channel banner"
+      },
+      "w": 2560,
+      "h": 1440,
+      "basis": "recommended",
+      "source": "ytBrand",
+      "note": "중요 내용은 중앙. 최소2048×1152에서 안전영역1235×338.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 6291456,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "yt-banner-min",
+      "platform": "YouTube",
+      "name": {
+        "ko": "채널 배너 최소",
+        "en": "Channel banner minimum"
+      },
+      "w": 2048,
+      "h": 1152,
+      "basis": "minimum",
+      "source": "ytBrand",
+      "note": "중앙1235×338에 중요 내용 배치.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 6291456,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "yt-podcast",
+      "platform": "YouTube",
+      "name": {
+        "ko": "팟캐스트 정사각 작업용",
+        "en": "Podcast square artwork"
+      },
+      "w": 1400,
+      "h": 1400,
+      "basis": "ratio",
+      "source": "yt",
+      "note": "공식1:1 비율의 픽셀 환산 예시.",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "yt-watermark",
+      "platform": "YouTube",
+      "name": {
+        "ko": "영상 워터마크 최소",
+        "en": "Watermark minimum"
+      },
+      "w": 150,
+      "h": 150,
+      "basis": "minimum",
+      "source": "ytBrand",
+      "note": "정사각,1MB 미만.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 1048576,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "x-profile",
+      "platform": "X",
+      "name": {
+        "ko": "프로필",
+        "en": "Profile"
+      },
+      "w": 400,
+      "h": 400,
+      "basis": "recommended",
+      "source": "xProfile",
+      "note": "원형 표시 시 모서리 잘림.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 2097152,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "x-header",
+      "platform": "X",
+      "name": {
+        "ko": "헤더",
+        "en": "Header"
+      },
+      "w": 1500,
+      "h": 500,
+      "basis": "recommended",
+      "source": "xProfile",
+      "note": "기기별 위아래 잘림에 유의.",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "x-ad-landscape",
+      "platform": "X",
+      "name": {
+        "ko": "앱 버튼·캐러셀 광고 가로",
+        "en": "App/card ad landscape"
+      },
+      "w": 800,
+      "h": 418,
+      "basis": "recommended",
+      "source": "xAds",
+      "note": "광고용 규격.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "x-ad-square",
+      "platform": "X",
+      "name": {
+        "ko": "앱 버튼·캐러셀 광고 정사각",
+        "en": "App/card ad square"
+      },
+      "w": 800,
+      "h": 800,
+      "basis": "recommended",
+      "source": "xAds",
+      "note": "광고용 규격.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "x-supported-square",
+      "platform": "X",
+      "name": {
+        "ko": "광고 지원 예시 1:1",
+        "en": "Ad supported 1:1"
+      },
+      "w": 1080,
+      "h": 1080,
+      "basis": "supported",
+      "source": "xAds",
+      "note": "공식 추가 지원 예시, 일반 게시물 필수규격 아님.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "x-supported-portrait",
+      "platform": "X",
+      "name": {
+        "ko": "광고 지원 예시 4:5",
+        "en": "Ad supported 4:5"
+      },
+      "w": 1440,
+      "h": 1800,
+      "basis": "supported",
+      "source": "xAds",
+      "note": "공식 추가 지원 예시, 일반 게시물 필수규격 아님.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "x-supported-tall",
+      "platform": "X",
+      "name": {
+        "ko": "광고 지원 예시 2:3",
+        "en": "Ad supported 2:3"
+      },
+      "w": 1080,
+      "h": 1620,
+      "basis": "supported",
+      "source": "xAds",
+      "note": "공식 추가 지원 예시, 일반 게시물 필수규격 아님.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "x-supported-wide",
+      "platform": "X",
+      "name": {
+        "ko": "광고 지원 예시 1.91:1",
+        "en": "Ad supported 1.91:1"
+      },
+      "w": 2064,
+      "h": 1080,
+      "basis": "supported",
+      "source": "xAds",
+      "note": "공식 추가 지원 예시, 일반 게시물 필수규격 아님.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "x-supported-hd",
+      "platform": "X",
+      "name": {
+        "ko": "광고 지원 예시 16:9",
+        "en": "Ad supported 16:9"
+      },
+      "w": 1920,
+      "h": 1080,
+      "basis": "supported",
+      "source": "xAds",
+      "note": "공식 추가 지원 예시, 일반 게시물 필수규격 아님.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "x-supported-vertical",
+      "platform": "X",
+      "name": {
+        "ko": "광고 지원 예시 9:16",
+        "en": "Ad supported 9:16"
+      },
+      "w": 1080,
+      "h": 1920,
+      "basis": "supported",
+      "source": "xAds",
+      "note": "공식 추가 지원 예시, 일반 게시물 필수규격 아님.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-profile",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "프로필 최소",
+        "en": "Profile minimum"
+      },
+      "w": 400,
+      "h": 400,
+      "basis": "minimum",
+      "source": "liProfile",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 8388608,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-banner",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "개인 배경",
+        "en": "Personal background"
+      },
+      "w": 1584,
+      "h": 396,
+      "basis": "recommended",
+      "source": "liProfile",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 8388608,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-logo",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "회사 로고",
+        "en": "Company logo"
+      },
+      "w": 400,
+      "h": 400,
+      "basis": "recommended",
+      "source": "liPage",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 3145728,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-page-cover",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "회사 Page 커버",
+        "en": "Company Page cover"
+      },
+      "w": 1512,
+      "h": 256,
+      "basis": "recommended",
+      "source": "liPage",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 3145728,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-link",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "URL 포함 Page 게시물",
+        "en": "Page post with URL"
+      },
+      "w": 1200,
+      "h": 627,
+      "basis": "specified",
+      "source": "liPage",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-life-main",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "Life 메인",
+        "en": "Life main image"
+      },
+      "w": 1128,
+      "h": 376,
+      "basis": "recommended",
+      "source": "liPage",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 3145728,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-life-module",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "Life 모듈",
+        "en": "Life custom module"
+      },
+      "w": 502,
+      "h": 282,
+      "basis": "recommended",
+      "source": "liPage",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 3145728,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-company-photo",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "회사 사진",
+        "en": "Company photo"
+      },
+      "w": 900,
+      "h": 600,
+      "basis": "recommended",
+      "source": "liPage",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 3145728,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-ad-wide",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "광고 가로",
+        "en": "Ad landscape"
+      },
+      "w": 1200,
+      "h": 628,
+      "basis": "recommended",
+      "source": "liAds",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-ad-square",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "광고 정사각",
+        "en": "Ad square"
+      },
+      "w": 1200,
+      "h": 1200,
+      "basis": "recommended",
+      "source": "liAds",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "li-ad-portrait",
+      "platform": "LinkedIn",
+      "name": {
+        "ko": "광고 세로",
+        "en": "Ad portrait"
+      },
+      "w": 720,
+      "h": 900,
+      "basis": "recommended",
+      "source": "liAds",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 5242880,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "tik-ad-wide",
+      "platform": "TikTok",
+      "name": {
+        "ko": "캐러셀 광고 가로",
+        "en": "Carousel ad landscape"
+      },
+      "w": 1200,
+      "h": 628,
+      "basis": "specified",
+      "source": "tik",
+      "note": "공식 광고 해상도.100KB 이하는 권장 용량이며 최대 제한 아님.",
+      "checkedAt": "2026-10-17",
+      "recommendedBytes": 102400,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "tik-ad-square",
+      "platform": "TikTok",
+      "name": {
+        "ko": "캐러셀 광고 정사각",
+        "en": "Carousel ad square"
+      },
+      "w": 640,
+      "h": 640,
+      "basis": "specified",
+      "source": "tik",
+      "note": "공식 광고 해상도.100KB 이하는 권장 용량이며 최대 제한 아님.",
+      "checkedAt": "2026-10-17",
+      "recommendedBytes": 102400,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "tik-ad-vertical",
+      "platform": "TikTok",
+      "name": {
+        "ko": "캐러셀 광고 세로",
+        "en": "Carousel ad portrait"
+      },
+      "w": 720,
+      "h": 1280,
+      "basis": "specified",
+      "source": "tik",
+      "note": "공식 광고 해상도.100KB 이하는 권장 용량이며 최대 제한 아님.",
+      "checkedAt": "2026-10-17",
+      "recommendedBytes": 102400,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "tik-photo",
+      "platform": "TikTok",
+      "name": {
+        "ko": "사진·커버 작업용 9:16",
+        "en": "Photo / cover artwork 9:16"
+      },
+      "w": 1080,
+      "h": 1920,
+      "basis": "working",
+      "source": "common",
+      "note": "일반 사진 게시물 공식 고정px 미확인. 동영상 생성 기능 아님.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "pin-standard",
+      "platform": "Pinterest",
+      "name": {
+        "ko": "Standard Pin",
+        "en": "Standard Pin"
+      },
+      "w": 1000,
+      "h": 1500,
+      "basis": "recommended",
+      "source": "pin",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 20971520,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "pin-carousel-square",
+      "platform": "Pinterest",
+      "name": {
+        "ko": "캐러셀 광고 정사각",
+        "en": "Carousel ad square"
+      },
+      "w": 1000,
+      "h": 1000,
+      "basis": "ratio",
+      "source": "pin",
+      "note": "공식1:1 비율의 환산 예시.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 20971520,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "pin-idea",
+      "platform": "Pinterest",
+      "name": {
+        "ko": "Idea 광고",
+        "en": "Idea ad"
+      },
+      "w": 1080,
+      "h": 1920,
+      "basis": "recommended",
+      "source": "pin",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "pin-showcase",
+      "platform": "Pinterest",
+      "name": {
+        "ko": "Showcase 광고",
+        "en": "Showcase ad"
+      },
+      "w": 1000,
+      "h": 1500,
+      "basis": "recommended",
+      "source": "pin",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "pin-cover",
+      "platform": "Pinterest",
+      "name": {
+        "ko": "비즈니스 프로필 커버 최소",
+        "en": "Business cover minimum"
+      },
+      "w": 800,
+      "h": 450,
+      "basis": "minimum",
+      "source": "pinCover",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "naver-title",
+      "platform": "네이버",
+      "name": {
+        "ko": "블로그 PC 타이틀 작업용",
+        "en": "Blog PC title artwork"
+      },
+      "w": 966,
+      "h": 300,
+      "basis": "range-example",
+      "source": "naver",
+      "note": "공식 등록범위 가로966/높이50~600 안에서 높이300을 선택한 예시.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 20971520,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "asciiFilename": true
+    },
+    {
+      "id": "naver-ad-da",
+      "platform": "네이버",
+      "name": {
+        "ko": "모바일 DA",
+        "en": "Mobile display ad"
+      },
+      "w": 1250,
+      "h": 560,
+      "basis": "historical",
+      "source": "naverAds",
+      "note": "2025 공지 기준. 집행 전 최신 개별가이드 확인.",
+      "checkedAt": "2026-10-17",
+      "minBytes": 51200,
+      "maxBytes": 256000,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "asciiFilename": true
+    },
+    {
+      "id": "naver-ad-square",
+      "platform": "네이버",
+      "name": {
+        "ko": "이미지 배너 정사각",
+        "en": "Square image banner"
+      },
+      "w": 1200,
+      "h": 1200,
+      "basis": "historical",
+      "source": "naverAds",
+      "note": "2025 공지 기준. 집행 전 최신 개별가이드 확인.",
+      "checkedAt": "2026-10-17",
+      "minBytes": 81920,
+      "maxBytes": 819200,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "asciiFilename": true
+    },
+    {
+      "id": "naver-ad-native",
+      "platform": "네이버",
+      "name": {
+        "ko": "모바일 DA 네이티브",
+        "en": "Mobile native ad"
+      },
+      "w": 342,
+      "h": 228,
+      "basis": "historical",
+      "source": "naverAds",
+      "note": "2025 공지 기준. 집행 전 최신 개별가이드 확인.",
+      "checkedAt": "2026-10-17",
+      "minBytes": 10240,
+      "maxBytes": 133120,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "asciiFilename": true
+    },
+    {
+      "id": "naver-ad-feed",
+      "platform": "네이버",
+      "name": {
+        "ko": "모바일 DA 피드 가로",
+        "en": "Mobile feed ad"
+      },
+      "w": 1200,
+      "h": 628,
+      "basis": "historical",
+      "source": "naverAds",
+      "note": "2025 공지 기준. 집행 전 최신 개별가이드 확인.",
+      "checkedAt": "2026-10-17",
+      "minBytes": 51200,
+      "maxBytes": 512000,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "asciiFilename": true
+    },
+    {
+      "id": "naver-ad-collection",
+      "platform": "네이버",
+      "name": {
+        "ko": "컬렉션",
+        "en": "Collection ad"
+      },
+      "w": 600,
+      "h": 600,
+      "basis": "historical",
+      "source": "naverAds",
+      "note": "2025 공지 기준. 집행 전 최신 개별가이드 확인.",
+      "checkedAt": "2026-10-17",
+      "minBytes": 20480,
+      "maxBytes": 512000,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "asciiFilename": true
+    },
+    {
+      "id": "kakao-profile",
+      "platform": "카카오",
+      "name": {
+        "ko": "채널 프로필",
+        "en": "Channel profile"
+      },
+      "w": 640,
+      "h": 640,
+      "basis": "recommended",
+      "source": "kakao",
+      "note": "개인 카카오톡 프로필과 구분.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 10485760,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "kakao-brand-wide",
+      "platform": "카카오",
+      "name": {
+        "ko": "브랜드카드 16:9",
+        "en": "Brand card 16:9"
+      },
+      "w": 1280,
+      "h": 720,
+      "basis": "ratio",
+      "source": "kakao",
+      "note": "공식 권장비율의 픽셀 환산 예시.",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "maxBytes": 10485760
+    },
+    {
+      "id": "kakao-brand-square",
+      "platform": "카카오",
+      "name": {
+        "ko": "브랜드카드 1:1",
+        "en": "Brand card 1:1"
+      },
+      "w": 1080,
+      "h": 1080,
+      "basis": "ratio",
+      "source": "kakao",
+      "note": "공식 권장비율의 픽셀 환산 예시.",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "maxBytes": 10485760
+    },
+    {
+      "id": "kakao-brand-portrait",
+      "platform": "카카오",
+      "name": {
+        "ko": "브랜드카드 3:4",
+        "en": "Brand card 3:4"
+      },
+      "w": 1080,
+      "h": 1440,
+      "basis": "ratio",
+      "source": "kakao",
+      "note": "공식 권장비율의 픽셀 환산 예시.",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ],
+      "maxBytes": 10485760
+    },
+    {
+      "id": "kakao-message",
+      "platform": "카카오",
+      "name": {
+        "ko": "와이드 이미지 메시지",
+        "en": "Wide image message"
+      },
+      "w": 800,
+      "h": 600,
+      "basis": "recommended",
+      "source": "kakaoMessage",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 10485760,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "kakao-intro",
+      "platform": "카카오",
+      "name": {
+        "ko": "캐러셀커머스 인트로",
+        "en": "Commerce carousel intro"
+      },
+      "w": 800,
+      "h": 1100,
+      "basis": "recommended",
+      "source": "kakaoMessage",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 10485760,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "kakao-product",
+      "platform": "카카오",
+      "name": {
+        "ko": "캐러셀커머스 상품",
+        "en": "Commerce carousel product"
+      },
+      "w": 800,
+      "h": 800,
+      "basis": "recommended",
+      "source": "kakaoMessage",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 10485760,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "snap-image",
+      "platform": "Snapchat",
+      "name": {
+        "ko": "단일 이미지·Story 광고",
+        "en": "Single image / Story ad"
+      },
+      "w": 720,
+      "h": 1280,
+      "basis": "specified",
+      "source": "snap",
+      "note": "동영상이 아닌 정적 이미지 출력.",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "snap-chat",
+      "platform": "Snapchat",
+      "name": {
+        "ko": "브랜드 채팅 배경",
+        "en": "Branded chat background"
+      },
+      "w": 1080,
+      "h": 1920,
+      "basis": "specified",
+      "source": "snap",
+      "note": "",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "snap-filter",
+      "platform": "Snapchat",
+      "name": {
+        "ko": "정적 필터 캔버스",
+        "en": "Static filter canvas"
+      },
+      "w": 945,
+      "h": 2048,
+      "basis": "specified",
+      "source": "snap",
+      "note": "PNG 필요. 실제 필터 심사·UI 안전영역은 별도 확인.",
+      "checkedAt": "2026-10-17",
+      "formats": [
+        "image/png"
+      ]
+    },
+    {
+      "id": "twitch-profile",
+      "platform": "Twitch",
+      "name": {
+        "ko": "프로필",
+        "en": "Profile"
+      },
+      "w": 256,
+      "h": 256,
+      "basis": "specified",
+      "source": "twitchProfile",
+      "note": "",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 10485760,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "twitch-banner",
+      "platform": "Twitch",
+      "name": {
+        "ko": "프로필 배너",
+        "en": "Profile banner"
+      },
+      "w": 1200,
+      "h": 480,
+      "basis": "recommended",
+      "source": "twitch",
+      "note": "브라우저 폭에 따라 표시가 달라짐.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 10485760,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "discord-user-banner",
+      "platform": "Discord",
+      "name": {
+        "ko": "사용자 프로필 배너 최소",
+        "en": "User profile banner minimum"
+      },
+      "w": 680,
+      "h": 240,
+      "basis": "minimum",
+      "source": "discord",
+      "note": "Nitro 필요. 서버별 프로필 배너와 구분.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 10485760,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "discord-server-profile",
+      "platform": "Discord",
+      "name": {
+        "ko": "서버별 프로필 배너 최소",
+        "en": "Per-server profile banner minimum"
+      },
+      "w": 600,
+      "h": 240,
+      "basis": "minimum",
+      "source": "discordServer",
+      "note": "Nitro 필요.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 10485760,
+      "formats": [
+        "image/png",
+        "image/jpeg"
+      ]
+    },
+    {
+      "id": "bsky-square",
+      "platform": "Bluesky",
+      "name": {
+        "ko": "게시물 정사각 작업용",
+        "en": "Square post artwork"
+      },
+      "w": 1080,
+      "h": 1080,
+      "basis": "working",
+      "source": "bsky",
+      "note": "임의 비율을 허용하는 게시물의 작업 예시.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 2097152
+    },
+    {
+      "id": "bsky-wide",
+      "platform": "Bluesky",
+      "name": {
+        "ko": "게시물 가로 작업용",
+        "en": "Landscape post artwork"
+      },
+      "w": 1200,
+      "h": 630,
+      "basis": "working",
+      "source": "bsky",
+      "note": "임의 비율을 허용하는 게시물의 작업 예시.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 2097152
+    },
+    {
+      "id": "bsky-portrait",
+      "platform": "Bluesky",
+      "name": {
+        "ko": "게시물 세로 작업용",
+        "en": "Portrait post artwork"
+      },
+      "w": 1080,
+      "h": 1350,
+      "basis": "working",
+      "source": "bsky",
+      "note": "임의 비율을 허용하는 게시물의 작업 예시.",
+      "checkedAt": "2026-10-17",
+      "maxBytes": 2097152
+    },
+    {
+      "id": "common-square",
+      "platform": "공통",
+      "name": {
+        "ko": "공통 1:1",
+        "en": "Common 1:1"
+      },
+      "w": 1080,
+      "h": 1080,
+      "basis": "working",
+      "source": "common",
+      "note": "",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "common-portrait",
+      "platform": "공통",
+      "name": {
+        "ko": "공통 4:5",
+        "en": "Common 4:5"
+      },
+      "w": 1080,
+      "h": 1350,
+      "basis": "working",
+      "source": "common",
+      "note": "",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "common-photo",
+      "platform": "공통",
+      "name": {
+        "ko": "공통 3:4",
+        "en": "Common 3:4"
+      },
+      "w": 1080,
+      "h": 1440,
+      "basis": "working",
+      "source": "common",
+      "note": "",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "common-vertical",
+      "platform": "배너",
+      "name": {
+        "ko": "세로 배너 · 9:16",
+        "en": "Portrait banner · 9:16"
+      },
+      "w": 1080,
+      "h": 1920,
+      "basis": "working",
+      "source": "banner",
+      "note": "제작 편의를 위한 가로·세로 배너 예시입니다. 특정 플랫폼의 공식 의무 규격이 아닙니다.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "common-wide",
+      "platform": "배너",
+      "name": {
+        "ko": "가로 배너 · 16:9",
+        "en": "Landscape banner · 16:9"
+      },
+      "w": 1920,
+      "h": 1080,
+      "basis": "working",
+      "source": "banner",
+      "note": "제작 편의를 위한 가로·세로 배너 예시입니다. 특정 플랫폼의 공식 의무 규격이 아닙니다.",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "common-og",
+      "platform": "공통",
+      "name": {
+        "ko": "공통 1.90:1",
+        "en": "Common 1.90:1"
+      },
+      "w": 1200,
+      "h": 630,
+      "basis": "working",
+      "source": "common",
+      "note": "",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "common-pin",
+      "platform": "공통",
+      "name": {
+        "ko": "공통 2:3",
+        "en": "Common 2:3"
+      },
+      "w": 1000,
+      "h": 1500,
+      "basis": "working",
+      "source": "common",
+      "note": "",
+      "checkedAt": "2026-10-17"
+    },
+    {
+      "id": "banner-1200x400",
+      "platform": "배너",
+      "name": {
+        "ko": "가로 배너 · 1200 × 400",
+        "en": "Banner · 1200 × 400"
+      },
+      "w": 1200,
+      "h": 400,
+      "basis": "working",
+      "source": "banner",
+      "note": "제작 편의를 위한 가로·세로 배너 예시입니다. 특정 플랫폼의 공식 의무 규격이 아닙니다."
+    },
+    {
+      "id": "banner-1800x600",
+      "platform": "배너",
+      "name": {
+        "ko": "가로 배너 · 1800 × 600",
+        "en": "Banner · 1800 × 600"
+      },
+      "w": 1800,
+      "h": 600,
+      "basis": "working",
+      "source": "banner",
+      "note": "제작 편의를 위한 가로·세로 배너 예시입니다. 특정 플랫폼의 공식 의무 규격이 아닙니다."
+    },
+    {
+      "id": "banner-600x1200",
+      "platform": "배너",
+      "name": {
+        "ko": "세로 배너 · 600 × 1200",
+        "en": "Banner · 600 × 1200"
+      },
+      "w": 600,
+      "h": 1200,
+      "basis": "working",
+      "source": "banner",
+      "note": "제작 편의를 위한 가로·세로 배너 예시입니다. 특정 플랫폼의 공식 의무 규격이 아닙니다."
+    },
+    {
+      "id": "banner-2000x100",
+      "platform": "배너",
+      "name": {
+        "ko": "초가로 배너 · 2000 × 100",
+        "en": "Banner · 2000 × 100"
+      },
+      "w": 2000,
+      "h": 100,
+      "basis": "working",
+      "source": "banner",
+      "note": "제작 편의를 위한 가로·세로 배너 예시입니다. 특정 플랫폼의 공식 의무 규격이 아닙니다."
+    }
+  ]
+}

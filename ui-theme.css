@@ -1,0 +1,55 @@
+/* Load last. Explicit UI selectors intentionally exclude document render hosts and artwork. */
+:root, :root[data-ui-theme="light"] {
+  color-scheme: light;
+  --bg:#ffffff; --surface:#ffffff; --border:#dedee5;
+  --text-primary:#000000; --text-secondary:#25252b; --text-muted:#52525d;
+  --accent:#6842d9; --accent-light:#f1edff; --accent-mid:#7955df;
+  --danger:#b42318; --radius:14px;
+  --shadow:0 2px 8px #18182305,0 12px 32px #18182306;
+  --ui-subtle:#f7f7fa; --ui-hover:#f0f0f5;
+  --ui-accent-hover:#5530c0; --ui-on-accent:#ffffff;
+  --ui-error-bg:#fff0ed; --ui-error-text:#9a231b;
+  --ui-grid-a:#ededf1; --ui-grid-b:#ffffff;
+}
+:root[data-ui-theme="dark"] {
+  color-scheme:dark;
+  --bg:#111113; --surface:#1c1c20; --border:#42424a;
+  --text-primary:#f7f7fa; --text-secondary:#e0e0e7; --text-muted:#b5b5c1;
+  --accent:#b5a0ff; --accent-light:#302543; --accent-mid:#c4b3ff;
+  --danger:#ffb4a8; --shadow:0 4px 24px #0003;
+  --ui-subtle:#25252b; --ui-hover:#303037;
+  --ui-accent-hover:#c4b3ff; --ui-on-accent:#171022;
+  --ui-error-bg:#401e20; --ui-error-text:#ffb4a8;
+  --ui-grid-a:#35353b; --ui-grid-b:#26262c;
+}
+html,body { background-color:var(--bg); color:var(--text-primary); }
+.ui-header-controls { display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0; }
+.ui-theme-toggle { display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:7px 12px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text-primary);font:inherit;font-size:.8rem;font-weight:650;white-space:nowrap;cursor:pointer; }
+.ui-theme-toggle:hover { background:var(--ui-hover);border-color:var(--accent-mid); }
+.brand .logo>rect { fill:var(--accent); }
+.brand .logo>g { stroke:var(--ui-on-accent); }
+.card,details,.layer-group,.design-dialog { background:var(--surface);color:var(--text-primary); }
+.meta-item,.sns-preset-card,.design-card { background:var(--ui-subtle); }
+.lang-toggle button { color:var(--text-primary); }
+.lang-toggle button.active,.btn-primary { background:var(--accent);color:var(--ui-on-accent); }
+.btn-primary:hover:not(:disabled) { background:var(--ui-accent-hover);color:var(--ui-on-accent); }
+.btn-primary:active:not(:disabled) { transform:translateY(1px); }
+.btn-ghost,.doc-btn,.layer-search button,.presets button,.ui-theme-toggle { color:var(--text-primary);background:var(--surface);border-color:var(--border); }
+.btn-ghost:hover:not(:disabled),.doc-btn:hover:not(:disabled),.layer-search button:hover:not(:disabled),.presets button:hover:not(:disabled) { color:var(--text-primary);background:var(--ui-hover);border-color:var(--accent-mid); }
+.layer-list button { color:var(--text-primary);background:var(--surface); }
+.layer-list button[aria-pressed=true] { color:var(--accent);background:var(--accent-light); }
+input:is([type=text],[type=search],[type=number]),select,textarea,.layer-props input,.layer-props select,.layer-props textarea,.free-ai-design textarea,.design-candidates textarea { color:var(--text-primary);background-color:var(--surface);border-color:var(--border); }
+input::placeholder,textarea::placeholder { color:var(--text-muted);opacity:1; }
+input[type=color] { background:var(--surface);border-color:var(--border); }
+input[type=checkbox],input[type=radio],input[type=range] { accent-color:var(--accent); }
+.notice.error { background:var(--ui-error-bg);color:var(--ui-error-text); }
+.design-dialog::backdrop { background:#09090dcc; }
+.layer-stage,.design-image-button,#previewImg { background:repeating-conic-gradient(var(--ui-grid-a) 0% 25%,var(--ui-grid-b) 0% 50%) 50%/18px 18px; }
+.free-ai-cards img { background:var(--ui-subtle); }
+.workspace-controls { background:var(--surface);border-color:var(--border); }
+.workspace-controls button { background:var(--surface);color:var(--text-primary);border-color:var(--border); }
+.workspace-controls button:hover:not(:disabled) { background:var(--ui-hover);border-color:var(--accent-mid); }
+.workspace-release { color:var(--text-muted); }
+button:focus-visible,a:focus-visible,[tabindex]:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible { outline:3px solid var(--accent-mid);outline-offset:3px; }
+@media(max-width:560px) { .ui-header-controls { width:100%;justify-content:space-between;gap:8px; } }
+@media(prefers-reduced-motion:reduce) { .btn-primary:active:not(:disabled) { transform:none; } }

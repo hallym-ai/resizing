@@ -1,0 +1,25 @@
+{
+  "release": "protected-background-20261018-2",
+  "features": [
+    "yoga",
+    "workspace-controls",
+    "editable-text",
+    "vector-shapes",
+    "alignment",
+    "stack-order",
+    "embedded-fonts",
+    "svg-export",
+    "layer-categories",
+    "text-layer-search",
+    "dense-text-grid",
+    "design-brief",
+    "design-candidates",
+    "free-local-ai-design",
+    "priority-omission",
+    "whole-source-protection",
+    "automatic-size-candidates",
+    "protected-background",
+    "local-photo-candidates",
+    "ui-theme"
+  ]
+}

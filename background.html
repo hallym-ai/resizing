@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' blob: data:; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; font-src 'self' blob: data:; object-src 'none'; base-uri 'none'">
+<title>배경만 만들기 · 리사이징 코엑스</title>
+<script src="./ui-theme.js"></script>
+<link rel="stylesheet" href="./ui-theme.css">
+<link rel="stylesheet" href="./background-app.css?v=background-extract-20261101">
+</head>
+<body>
+<main>
+<header><div><a href="./">← 리사이징 편집기로</a><h1>배경만 만들기</h1><p>글씨·상품·로고·종이판을 제외한 배경을 원하는 규격으로 만듭니다.</p></div></header>
+<section class="controls" aria-label="입력과 출력 규격">
+<label class="file-label" for="backgroundFile">원본 PNG · JPG · PPTX<input id="backgroundFile" type="file" accept=".png,.jpg,.jpeg,.pptx,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.presentationml.presentation"></label>
+<p id="fileName" class="muted">원본 파일을 선택하세요. 원본 파일은 덮어쓰지 않습니다.</p>
+<div class="settings">
+<label>출력 규격<select id="backgroundPreset"><option value="1200x628">가로 배너 · 1200 × 628</option><option value="1080x1440">인스타그램 피드 · 1080 × 1440</option><option value="1080x1920">인스타그램 스토리 · 1080 × 1920</option><option value="1080x1350">릴스 썸네일 · 1080 × 1350</option><option value="1080x1080">카카오 소식 · 1080 × 1080</option><option value="custom">직접 입력</option></select></label>
+<label>너비 (px)<input id="backgroundWidth" type="number" min="1" max="12000" step="1" value="1200" inputmode="numeric"></label>
+<label>높이 (px)<input id="backgroundHeight" type="number" min="1" max="12000" step="1" value="628" inputmode="numeric"></label>
+</div>
+<div class="actions"><button id="backgroundRun" type="button" class="primary" disabled>배경만 만들기</button><button id="backgroundCancel" type="button" disabled>중지</button><button id="backgroundDownload" type="button" disabled>배경 PNG 저장</button></div>
+<p id="backgroundStatus" role="status" aria-live="polite">파일을 선택한 뒤 출력 규격을 정하세요.</p>
+<p id="backgroundWarning" class="warning" hidden></p>
+</section>
+<section class="previews" aria-label="원본과 배경 비교">
+<figure><figcaption>원본 · 비교용</figcaption><div class="canvas-host" id="originalHost"><p>선택한 원본을 표시합니다.</p></div></figure>
+<figure><figcaption>출력 · 배경만</figcaption><div class="canvas-host" id="backgroundHost"><p>아직 배경을 만들지 않았습니다.</p></div><p class="muted" id="backgroundSize"></p></figure>
+</section>
+<details id="foregroundDetails" hidden><summary>별도 보존한 전경 확인</summary><p class="muted">전경은 배경 PNG에 합성하지 않습니다.</p><div class="canvas-host" id="foregroundHost"></div></details>
+<p class="muted">원본 이미지에 가려진 배경은 실제 원본을 확인할 수 없습니다. 추정해 연결한 결과는 별도로 표시하며, 분리 근거가 없으면 다운로드용 결과를 만들지 않습니다. 생성형 AI는 사용하지 않습니다.</p>
+</main>
+<script type="module" src="./background-app.mjs?v=background-extract-20261101"></script>
+</body>
+</html>

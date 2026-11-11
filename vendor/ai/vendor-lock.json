@@ -1,0 +1,28 @@
+{
+  "package": "onnxruntime-web",
+  "version": "1.23.2",
+  "integrity": "sha512-T09JUtMn+CZLk3mFwqiH0lgQf+4S7+oYHHtk6uhaYAAJI95bTcKi5bOOZYwORXfS/RLZCjDDEXGWIuOCAFlEjg==",
+  "tarball": "https://registry.npmjs.org/onnxruntime-web/-/onnxruntime-web-1.23.2.tgz",
+  "files": [
+    {
+      "path": "ort-wasm-simd-threaded.asyncify.mjs",
+      "bytes": 51913,
+      "sha256": "249b4dc791f081d33bd11760bfd669fe85f97289e679bbeb291b874272125dff"
+    },
+    {
+      "path": "ort-wasm-simd-threaded.asyncify.wasm",
+      "bytes": 25499390,
+      "sha256": "babec0bbddb6d3082623b99b7e1391b75e0729bcca076ff8424d7753af97fada"
+    },
+    {
+      "path": "ort.webgpu.min.mjs",
+      "bytes": 66261,
+      "sha256": "8ae8f1340dd86f8aaa5acc0fd5ec2f42ae874ffd7c9cd804281b73fd177c9864"
+    }
+  ],
+  "modelManifest": null,
+  "modelManifests": [
+    "model-web512-fp32.json"
+  ],
+  "modelSharing": "One FP32 model reused by both WebGPU and WASM CPU"
+}
