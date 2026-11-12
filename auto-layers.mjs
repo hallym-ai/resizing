@@ -6,19 +6,19 @@ import {assessSplit} from './split-quality.mjs';
 import './layers.mjs';
 const $=id=>document.getElementById(id),MAX_REGIONS=140,MAX_PIXELS=8000000;
 const panel=document.createElement('section');panel.className='card auto-layer-entry';panel.id='autoLayerPanel';
-panel.innerHTML=`<div class="auto-heading"><span class="auto-dot" aria-hidden="true"></span><strong>자동 요소 인식</strong></div><p id="autoStatus" role="status" aria-live="polite">파일을 열면 글자와 그림을 자동으로 인식합니다.</p><progress id="autoBusy" max="100" value="0" hidden></progress><details><summary>인식 안내</summary><p>이미지·PDF 페이지는 자동 인식하고, PPTX는 원래 글자·그림 객체를 직접 분리해 아래 편집기에 레이어로 엽니다. 한국어·영어를 함께 읽고 필요한 글자 영역만 다시 확인합니다. 불확실한 한글은 정밀 모델로 자동 재확인할 수 있습니다. 처음 인식기를 준비할 때는 시간이 걸릴 수 있습니다.</p><p>로고·글자·그림은 단색에 가까운 주변 배경을 투명하게 분리하며, 투명한 곳은 요소 선택에서 제외합니다. 글자 내용은 요소를 선택해 확인·수정할 수 있습니다. 글자·그림 영역이 겹치거나 복잡한 배경을 구별하지 못하면 자동 레이어 생성을 중단하고 원본 리사이징을 유지합니다. 인식하지 못한 겹침은 남을 수 있으므로 가장자리·이동 후 드러나는 부분을 확인하세요. PPTX는 원래 객체를 직접 가져오며 사진 한 장 속 글자를 원본 객체로 복원하지는 않습니다. 한 글자로 오인한 도형은 글자로 확정하지 않습니다. 분석은 긴 변 2400px·800만 픽셀·140영역·최대 2분, 한글 부분 재확인은 최대 12곳·정밀 재확인은 3곳입니다. 사진 AI는 현재 보류 중이며 자동 모델 다운로드와 추론을 실행하지 않습니다. 아래는 향후 AI 재개 시 사용할 기존 경로 안내입니다. BiRefNet 512 모델을 별도로 준비해 브라우저에서 실행하는 방식입니다. GPU·CPU가 공유하는 모델 약165MB와 실행 파일이 처음 한 번 필요하며 캐시를 재사용합니다. AI 결과는 전경·배경 추정이며 글자가 섞인 사진은 개별 재배치를 자동 적용하지 않습니다. 파일은 외부로 전송하지 않습니다.</p><p>Tesseract.js 6.0.1 · 공식 tessdata_fast / tessdata_best 한국어 모델 (Apache-2.0). 언어를 선택할 필요 없이 한국어·영어를 함께 처리합니다. 다른 언어·작은 글자·장식 글꼴은 오인식할 수 있습니다. <a href="./vendor/ocr/vendor-lock.json" target="_blank" rel="noopener">출처·버전</a></p></details>`;
+panel.innerHTML=`<div class="auto-heading"><span class="auto-dot" aria-hidden="true"></span><strong>자동 요소 인식</strong></div><p id="autoStatus" role="status" aria-live="polite">파일을 열면 글자와 그림을 자동으로 인식합니다.</p><progress id="autoBusy" max="100" value="0" hidden></progress><details><summary>인식 안내</summary><p>이미지·PDF 페이지는 자동 인식하고, PPTX는 원래 글자·그림 객체를 직접 분리해 아래 편집기에 레이어로 엽니다. 한국어·영어를 함께 읽고 필요한 글자 영역만 다시 확인합니다. 불확실한 한글은 정밀 모델로 자동 재확인할 수 있습니다. 처음 인식기를 준비할 때는 시간이 걸릴 수 있습니다.</p><p>로고·글자·그림은 단색에 가까운 주변 배경을 투명하게 분리하며, 투명한 곳은 요소 선택에서 제외합니다. 글자 내용은 요소를 선택해 확인·수정할 수 있습니다. 질감 포스터는 글씨 모양과 그림 윤곽을 별도로 추정합니다. 글자 모양은 픽셀 이미지이며 원래 서체의 편집 글자를 복원한 것은 아닙니다. 이동 후 배경은 이웃색 채움으로 추정하므로 질감·겹친 요소·경계를 확인하세요. 분리할 수 있는 요소가 없으면 원본을 유지합니다. 인식하지 못한 겹침은 남을 수 있으므로 가장자리·이동 후 드러나는 부분을 확인하세요. PPTX는 원래 객체를 직접 가져오며 사진 한 장 속 글자를 원본 객체로 복원하지는 않습니다. 한 글자로 오인한 도형은 글자로 확정하지 않습니다. 분석은 긴 변 2400px·800만 픽셀·140영역·최대 2분, 한글 부분 재확인은 최대 12곳·정밀 재확인은 3곳입니다. 사진 AI는 현재 보류 중이며 자동 모델 다운로드와 추론을 실행하지 않습니다. 아래는 향후 AI 재개 시 사용할 기존 경로 안내입니다. BiRefNet 512 모델을 별도로 준비해 브라우저에서 실행하는 방식입니다. GPU·CPU가 공유하는 모델 약165MB와 실행 파일이 처음 한 번 필요하며 캐시를 재사용합니다. AI 결과는 전경·배경 추정이며 글자가 섞인 사진은 개별 재배치를 자동 적용하지 않습니다. 파일은 외부로 전송하지 않습니다.</p><p>Tesseract.js 6.0.1 · 공식 tessdata_fast / tessdata_best 한국어 모델 (Apache-2.0). 언어를 선택할 필요 없이 한국어·영어를 함께 처리합니다. 다른 언어·작은 글자·장식 글꼴은 오인식할 수 있습니다. <a href="./vendor/ocr/vendor-lock.json" target="_blank" rel="noopener">출처·버전</a></p></details>`;
 $('layerPanel').before(panel);
 const sourceNow=()=>globalThis.getLayerAnalysisSource?.();
 const sameSource=(a,b)=>!!a&&!!b&&a.source===b.source&&a.key===b.key;
 const equalSource=(a,b)=>a===b||sameSource(a,b);
 const status=(text,error=false)=>{$('autoStatus').textContent=text;panel.classList.toggle('error',error);};
 const slots={fast:{worker:null,pending:null,language:null},best:{worker:null,pending:null,language:null}};
-let job=0,busy=false,observed=null,ignored=null,pending=null,idleTimer=null,libraryPromise=null,regionWorker=null,regionReject=null,cutoutWorker=null,cutoutReject=null,importAbort=null,disposed=false,photoAbort=null;
+let job=0,busy=false,observed=null,ignored=null,pending=null,idleTimer=null,libraryPromise=null,regionWorker=null,regionReject=null,cutoutWorker=null,cutoutReject=null,importAbort=null,disposed=false,photoAbort=null;let ocrAssetAbort=null;
 const current=(token,source)=>!disposed&&token===job&&sameSource(source,sourceNow())&&!sameSource(source,ignored);
 function check(token,source){if(!current(token,source))throw Error('CANCELLED');}
 function terminateWorkers(){for(const slot of Object.values(slots)){void slot.worker?.terminate().catch(()=>{});slot.worker=null;slot.language=null;}}
 function cancelJob(){
- photoAbort?.abort();photoAbort=null;globalThis.clearPhotoAIResult?.();
+ ocrAssetAbort?.abort();ocrAssetAbort=null;photoAbort?.abort();photoAbort=null;globalThis.clearPhotoAIResult?.();
  ++job;clearTimeout(pending);pending=null;clearTimeout(idleTimer);idleTimer=null;importAbort?.abort();importAbort=null;
  if(busy)terminateWorkers();busy=false;panel.setAttribute('aria-busy','false');$('autoBusy').hidden=true;
  const reject=regionReject;regionReject=null;regionWorker?.terminate();regionWorker=null;reject?.(Error('CANCELLED'));
@@ -102,22 +102,29 @@ async function analyze(source){
   delete panel.dataset.sourceEngine;
   const sw=source.source.naturalWidth||source.source.width,sh=source.source.naturalHeight||source.source.height,scale=Math.min(1,2400/Math.max(sw,sh),Math.sqrt(MAX_PIXELS/(sw*sh)));
   image=document.createElement('canvas');image.width=Math.max(1,Math.round(sw*scale));image.height=Math.max(1,Math.round(sh*scale));image.getContext('2d').drawImage(source.source,0,0,image.width,image.height);
+  let text={regions:[],skipped:0,qualityLimited:false};
+  try{
+   ocrAssetAbort=new AbortController();
+   const assets=await Promise.all(['kor','eng'].map(language=>fetch(new URL('./vendor/ocr/lang/'+language+'.traineddata',import.meta.url),{method:'HEAD',signal:ocrAssetAbort.signal})));
+   check(token,source);if(assets.some(r=>!r.ok))throw Error('OCR 언어 자료를 준비하지 못했습니다.');
   await loadLibrary();check(token,source);const worker=await acquire('fast','kor+eng',token,source);await worker.setParameters(parameters(11));check(token,source);
   const ocr=document.createElement('canvas');ocr.width=image.width;ocr.height=image.height;const ctx=ocr.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,ocr.width,ocr.height);ctx.drawImage(image,0,0);
   let result;try{result=await worker.recognize(ocr,{}, {text:true,blocks:true});}finally{ocr.width=ocr.height=0;}check(token,source);
-  const text=linesFrom(result.data,1,image.width,image.height);
+  text=linesFrom(result.data,1,image.width,image.height);
   try{await refineKorean(text,image,token,source);}catch(error){check(token,source);text.qualityLimited=true;terminateWorkers();}
+  }catch(error){check(token,source);terminateWorkers();text.qualityLimited=true;}
+  finally{if(token===job)ocrAssetAbort=null;}
   check(token,source);
   $('autoBusy').value=85;const detected=await graphics(image.getContext('2d').getImageData(0,0,image.width,image.height).data,image.width,image.height,text.regions);check(token,source);
   const regions=[...text.regions,...detected.boxes.map(b=>({...b,type:'image',text:'',include:true,confidence:null,method:'colour-region'}))].slice(0,MAX_REGIONS);
   const quality=assessSplit(regions,image.width,image.height);
   // A product photograph does not make a flat poster an inseparable photo.
-  const d={source,image,regions,splitQuality:quality,photographic:looksLikePhoto(image),background:detected.background,name:source.name,sourceWidth:sw,sourceHeight:sh};
+  const d={source,image,regions,ocrUnavailable:text.qualityLimited&&!text.regions.length,splitQuality:quality,photographic:looksLikePhoto(image),background:detected.background,name:source.name,sourceWidth:sw,sourceHeight:sh};
   status('인식한 요소를 편집기에 준비하는 중…');const doc=await projectFor(d,token);check(token,source);
   const blob=new Blob([JSON.stringify(doc)],{type:'application/json'});if(blob.size>48*1024*1024)throw Error('인식 레이어가 너무 큽니다. 원본 리사이징은 계속 사용할 수 있습니다.');
   importAbort=new AbortController();const loaded=await globalThis.layerFileImport(new File([blob],source.name+'.json',{type:'application/json'}),{origin:'auto',sourceKey:source.key,signal:importAbort.signal,beforeCommit:()=>current(token,source)});check(token,source);
   if(!loaded)throw Error('인식한 레이어를 열지 못했습니다. 원본 리사이징은 계속 사용할 수 있습니다.');
-  const elapsed=((performance.now()-started)/1000).toFixed(1);status(`글자 ${text.regions.length}개 · 그림 후보 ${detected.boxes.length}개를 자동으로 열었습니다. (${elapsed}초) 아래에서 요소를 선택해 수정하세요.${d.maskStats.unresolved?' 배경이 복잡한 '+d.maskStats.unresolved+'개 영역은 분리 상태를 확인하세요.':''}${d.separationProof?.passed?' 원본 픽셀 재합성·단색 배경판 검증을 통과했습니다. 글자는 원본 이미지 조각이며 OCR 내용·상품 연결은 확인하세요.':''}${scale<1?' 분석 크기로 축소되었습니다.':''}${text.qualityLimited?' 일부 글자 재확인을 완료하지 못해 기본 인식 결과를 사용했습니다.':''}`);
+  const elapsed=((performance.now()-started)/1000).toFixed(1);status(d.posterReview?`글씨 모양 ${doc.scene.objects.filter(o=>o.nativeKind==='text').length}개 · 그림 후보 ${doc.scene.objects.filter(o=>o.sourceElementType==='raster-picture').length}개를 분리했습니다. (${elapsed}초) 아래 글씨/이미지 목록에서 각각 선택해 이동하세요. ${d.ocrUnavailable?'문자 인식 자료를 준비하지 못해 글씨 모양으로 분리했습니다. ':''}원래 글자 모양은 이미지이며 OCR 내용은 확인이 필요합니다. 가려진 배경은 이웃색으로 추정해 채웠으며 질감·겹친 요소는 원본과 비교하세요.`:`글자 ${text.regions.length}개 · 그림 후보 ${detected.boxes.length}개를 자동으로 열었습니다. (${elapsed}초) 아래에서 요소를 선택해 수정하세요.${d.maskStats.unresolved?' 배경이 복잡한 '+d.maskStats.unresolved+'개 영역은 분리 상태를 확인하세요.':''}${d.separationProof?.passed?' 원본 픽셀 재합성·단색 배경판 검증을 통과했습니다. 글자는 원본 이미지 조각이며 OCR 내용·상품 연결은 확인하세요.':''}${scale<1?' 분석 크기로 축소되었습니다.':''}${text.qualityLimited?' 일부 글자 재확인을 완료하지 못해 기본 인식 결과를 사용했습니다.':''}`);
   panel.dataset.completedKey=source.key;panel.dataset.durationMs=String(Math.round(performance.now()-started));
  }catch(e){
   if(current(token,source)&&e.photoAI){
@@ -136,24 +143,33 @@ async function analyze(source){
  }
  finally{clearTimeout(timeout);if(image)image.width=image.height=0;if(token===job){busy=false;importAbort=null;panel.setAttribute('aria-busy','false');$('autoBusy').hidden=true;idleTimer=setTimeout(terminateWorkers,60000);}}
 }
-function cutout(pixels,w,h,regions,background){return new Promise((resolve,reject)=>{
- const worker=new Worker(new URL('./cutout-worker.mjs',import.meta.url),{type:'module'});cutoutWorker=worker;cutoutReject=reject;
+function cutout(pixels,w,h,regions,background,poster=false){return new Promise((resolve,reject)=>{
+ const worker=new Worker(new URL(poster?'./poster-separation-worker.mjs':'./cutout-worker.mjs',import.meta.url),{type:'module'});cutoutWorker=worker;cutoutReject=reject;
  const finish=(error,result)=>{worker.terminate();if(cutoutWorker===worker){cutoutWorker=null;cutoutReject=null;}error?reject(error):resolve(result);};
  worker.onmessage=e=>e.data.error?finish(Error(e.data.error)):finish(null,e.data);worker.onerror=()=>finish(Error('요소 배경을 분리하지 못했습니다.'));worker.postMessage({width:w,height:h,pixels:pixels.buffer,regions,background},[pixels.buffer]);
 });}
 async function projectFor(d,token){
  const {image}=d,w=image.width,h=image.height,pixels=image.getContext('2d').getImageData(0,0,w,h).data;
  status('로고·글자·그림의 배경을 투명하게 분리하는 중…');
- const result=await cutout(pixels,w,h,d.regions,d.background);check(token,d.source);const proof=verifyRasterSeparation(image.getContext('2d').getImageData(0,0,w,h).data,w,h,result);d.separationProof=proof;globalThis.coexRasterSeparationResult={sourceKey:d.source.key,...proof};if(result.unresolved||(!proof.passed&&(d.photographic||!d.splitQuality?.safe||result.layers.some(b=>b.cutoutMethod==='boundary-background'))))throw photoRequired('배경·요소 분리 검증 실패: '+(proof.reason||d.splitQuality?.reason),d.regions.some(b=>b.type==='text'));if(proof.passed)for(const b of result.layers)b.cutoutMethod='verified-flat-background';d.maskStats={unresolved:result.unresolved,isolated:result.layers.filter(b=>b.cutoutMethod!=='unresolved').length};
+ let result=await cutout(pixels,w,h,d.regions,d.background);check(token,d.source);
+ let proof=verifyRasterSeparation(image.getContext('2d').getImageData(0,0,w,h).data,w,h,result);
+ const needsPoster=d.ocrUnavailable||result.unresolved||(!proof.passed&&(d.photographic||!d.splitQuality?.safe||result.layers.some(b=>b.cutoutMethod==='boundary-background')));
+ if(needsPoster){
+  status('질감 포스터의 글씨 모양·그림 윤곽을 분리하는 중…');
+  result=await cutout(image.getContext('2d').getImageData(0,0,w,h).data,w,h,d.regions.filter(r=>r.type==='text'),d.background,true);check(token,d.source);proof=result.proof;d.posterReview=true;
+ }else if(proof.passed)for(const b of result.layers)b.cutoutMethod='verified-flat-background';
+ d.separationProof=proof;globalThis.coexRasterSeparationResult={sourceKey:d.source.key,...proof,method:result.method,textCount:result.layers.filter(b=>b.type==='text').length,imageCount:result.layers.filter(b=>b.type!=='text').length};d.maskStats={unresolved:result.unresolved,isolated:result.layers.length};
  const layers=[];
  for(let i=0;i<result.layers.length;i++){
   check(token,d.source);const b=result.layers[i],c=document.createElement('canvas');c.width=b.w;c.height=b.h;c.getContext('2d').putImageData(new ImageData(b.rgba,b.w,b.h),0,0);
-  const label=b.type==='text'?'인식 글자':'그림 후보',object=imageObject(c.toDataURL('image/png'),b.w,b.h,b.x,b.y,b.type==='text'&&b.text?.trim()?b.text.replace(/\s+/g,' ').trim():`${label} ${i+1}`,b.type==='image'?'subject':'other',false,b.type==='text'?b.text:'');
+  const trustedText=b.type==='text'&&(!d.posterReview||b.confidence>=70)?b.text:'',label=b.type==='text'?'글씨 모양 · 내용 확인':'그림 후보';
+  const object=imageObject(c.toDataURL('image/png'),b.w,b.h,b.x,b.y,trustedText?.trim()?trustedText.replace(/\s+/g,' ').trim():`${label} ${i+1}`,b.type==='image'?'subject':'other',false,trustedText||'');
+  if(b.type==='text')object.nativeKind='text';object.sourceElementType=b.type==='text'?'raster-text':'raster-picture';
   object.layerRoleInferred=true;object.sourceElementId='raster-region:'+i;object.cutoutMethod=b.cutoutMethod;object.cutoutBackground=b.cutoutBackground;object.perPixelTargetFind=true;layers.push(object);c.width=c.height=0;b.rgba=null;if(i%4===0)await pause();
  }
  const background=document.createElement('canvas');background.width=w;background.height=h;background.getContext('2d').putImageData(new ImageData(result.background,w,h),0,0);
  const reference=imageObject(image.toDataURL('image/png'),w,h,0,0,'원본 비교용 · 숨김 (분석 해상도)','background',true);reference.visible=false;
- const base=imageObject(background.toDataURL('image/png'),w,h,0,0,'추정 배경 · 이동 후 빈 곳을 확인','background',true);background.width=background.height=0;
+ const base=imageObject(background.toDataURL('image/png'),w,h,0,0,'추정 배경 · 가려진 질감은 이웃색 채움','background',true);background.width=background.height=0;
  return{format:'coex-layer-project',version:1,inputKind:'raster',sourceFormat:'image',width:w,height:h,name:d.name,analysis:{engine:'tesseract-auto-local',foregroundMask:'flat-or-boundary-matte',rasterSeparationProof:d.separationProof,estimated:true,sourceWidth:d.sourceWidth,sourceHeight:d.sourceHeight},scene:{version:'7.4.0',objects:[reference,base,...layers]}};
 }
 function imageObject(src,w,h,left,top,name,role,locked,sourceText=''){return{type:'Image',version:'7.4.0',originX:'left',originY:'top',left,top,width:w,height:h,scaleX:1,scaleY:1,angle:0,opacity:1,visible:true,src,layerName:name,layerRole:role,layerLocked:locked,sourceText,crossOrigin:null,filters:[]};}
