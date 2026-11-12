@@ -3,8 +3,18 @@ import './layers.mjs';
 const by=id=>document.getElementById(id),editor=by('editor'),size=by('outputSizeControls'),result=by('previewImg')?.closest('.section'),dock=by('layerSizeDock'),work=by('layerWork');
 if(editor&&size&&result){
  const outer=document.createElement('div');outer.id='outputPreviewWorkbench';
- const layout=by('layerStage')?.closest('.layer-layout');
- if(dock&&layout){const nativeHost=document.createElement('div');nativeHost.className='output-native-workbench';layout.before(nativeHost);nativeHost.append(dock);}
+ const stage=by('layerStage'),layout=stage?.closest('.layer-layout'),fields=by('layerFields');
+ if(layout&&fields&&layout.parentNode===fields)fields.prepend(layout);
+ const layerPanel=by('layerPanel'),openTools=by('layerOpen')?.closest('.layer-tools');
+ if(layerPanel&&work&&work.parentNode===layerPanel){layerPanel.prepend(work);if(openTools)layerPanel.prepend(openTools);}
+ if(stage&&layout){
+  const tools=document.createElement('div');tools.className='layer-primary-tools';
+  for(const id of ['layerSelectAll','layerTextAdd']){const group=by(id)?.closest('.layer-tools');if(group)tools.append(group);}
+  if(tools.children.length)stage.before(tools);
+ }
+ if(dock&&stage)stage.after(dock);
+ const drop=by('dropzone'),automatic=by('autoLayerPanel');
+ if(drop&&automatic&&drop.parentNode===automatic.parentNode)automatic.before(drop);
  const grid=document.createElement('div');grid.className='output-workbench-grid';
  const settings=document.createElement('div');settings.className='output-workbench-settings';
  outer.append(grid);grid.append(settings);editor.prepend(outer);
@@ -21,7 +31,9 @@ if(editor&&size&&result){
  .output-result-near-controls #previewImg{max-height:min(42vh,360px);width:100%;object-fit:contain}
  .output-result-near-controls .actions{padding:12px 0 0;gap:8px;flex-wrap:wrap}
  .output-result-near-controls #editingBridge .sns-toolbar{gap:6px;flex-wrap:wrap}
- .output-native-workbench{container-type:inline-size;min-width:0;margin-bottom:12px}
+ .layer-preview-column{container-type:inline-size;min-width:0}
+ .layer-primary-tools{display:grid;gap:8px;margin-bottom:10px}
+ #layerSizeDock{margin-top:12px}
  #layerSizeDock>#outputSizeControls{margin:0;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface,#fff)}
  #layerSizeDock .dims{flex-wrap:wrap}
  #layerSizeDock .dims .col{min-width:90px}
@@ -37,7 +49,12 @@ if(editor&&size&&result){
  let queued=false;
  function reconcile(){
   queued=false;
+  if(layout&&fields&&layout.parentNode===fields&&fields.firstElementChild!==layout)fields.prepend(layout);
   const active=!!dock&&!!work&&!work.hidden&&dock.contains(size);
+  if(automatic&&layerPanel&&automatic.parentNode===layerPanel.parentNode){
+   if(active&&layerPanel.nextElementSibling!==automatic)layerPanel.after(automatic);
+   else if(!active&&automatic.nextElementSibling!==layerPanel)layerPanel.before(automatic);
+  }
   if(active){outer.hidden=true;if(size.nextElementSibling!==result)size.after(result);}
   else{outer.hidden=false;if(size.parentNode!==settings)settings.append(size);if(result.parentNode!==grid)grid.append(result);}
  }
@@ -45,6 +62,7 @@ if(editor&&size&&result){
  const observer=new MutationObserver(schedule);
  // Watch only mounting points, not every edit/status mutation in the document.
  observer.observe(editor,{childList:true});observer.observe(settings,{childList:true});
+ if(fields)observer.observe(fields,{childList:true});
  if(dock)observer.observe(dock,{childList:true});
  if(work)observer.observe(work,{attributes:true,attributeFilter:['hidden']});
  reconcile();

@@ -69,7 +69,7 @@ export function resizeBackgroundOnly(state,width,height){
  const originalFrame=parts.backgrounds.find(p=>p.textureProfile)?.object.textureBackgroundFrame||{x:0,y:0,w:state.width,h:state.height};
  const l=Math.min(originalFrame.x,...boxes.map(b=>b.left)),t=Math.min(originalFrame.y,...boxes.map(b=>b.top));
  const r=Math.max(originalFrame.x+originalFrame.w,...boxes.map(b=>b.left+b.width)),b=Math.max(originalFrame.y+originalFrame.h,...boxes.map(b=>b.top+b.height));
- const scale=Math.min(1,width/(r-l),height/(b-t)),x=(width-(r-l)*scale)/2,y=(height-(b-t)*scale)/2;
+ const scale=Math.min(width/(r-l),height/(b-t)),x=(width-(r-l)*scale)/2,y=(height-(b-t)*scale)/2;
  const backgroundSet=new Set(parts.backgrounds.map(p=>p.object));
  // For a very different aspect ratio, cover can remove the entire supporting
  // surface. Stretch only the isolated background photo; never products/text.

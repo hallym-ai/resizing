@@ -3,7 +3,7 @@ import './free-ai-design.mjs';
 // Size changes produce quick, editable candidates without downloading an AI model.
 const $=id=>document.getElementById(id),api=()=>globalThis.coexLayerLayout;
 const controls=document.createElement('label');controls.className='design-check';
-controls.innerHTML='<input id="designAutoResize" type="checkbox" checked> 규격을 바꾸면 해당 크기의 디자인 후보 자동 만들기';
+controls.innerHTML='<input id="designAutoResize" type="checkbox"> 규격을 바꾸면 해당 크기의 디자인 후보 자동 만들기';
 $('designCandidates').querySelector('.design-actions').before(controls);
 let timer=null,pending=null;
 function cancel(){clearTimeout(timer);pending=null;}
@@ -43,5 +43,5 @@ $('designAutoResize').addEventListener('change',()=>{if(!$('designAutoResize').c
 for(const event of ['coex:layer-source','coex:history-source'])window.addEventListener(event,cancel);
 for(const [id,event]of [['fileInput','change'],['dropzone','drop']])$(id)?.addEventListener(event,cancel,true);
 document.addEventListener('paste',e=>{if(e.clipboardData?.files?.length)cancel();},true);
-$('resetBtn').addEventListener('click',()=>{cancel();$('designAutoResize').checked=true;});
+$('resetBtn').addEventListener('click',()=>{cancel();$('designAutoResize').checked=false;});
 window.addEventListener('pagehide',cancel);

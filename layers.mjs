@@ -168,7 +168,7 @@ for(const el of [...by('outputSizeControls').children])if(el.matches('.row2,.sns
 const scales=by('outputSizeControls').querySelector('.presets');if(scales)moreOutput.prepend(scales);
 by('outputSizeControls').append(moreOutput);
 const morePresets=document.createElement('details');morePresets.className='layer-all-presets';morePresets.innerHTML='<summary>전체 SNS 규격·저장한 규격 찾기</summary>';
-const dockHelp=document.createElement('p');dockHelp.className='layer-help';dockHelp.textContent='규격을 바꾸면 바로 아래 편집 캔버스에 적용됩니다. 결과의 글자·이미지를 선택해 계속 편집하세요.';
+const dockHelp=document.createElement('p');dockHelp.className='layer-help';dockHelp.textContent='규격을 바꾸면 편집 캔버스에 적용됩니다. 글자·이미지를 선택해 계속 편집하세요.';
 sizeDock.append(dockHelp,morePresets);
 function mountSizeControls(active){
  if(active){if(by('outputSizeControls').parentNode!==sizeDock)sizeDock.prepend(by('outputSizeControls'));if(by('snsSection').parentNode!==morePresets)morePresets.append(by('snsSection'));}
