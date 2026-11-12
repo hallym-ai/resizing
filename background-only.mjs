@@ -2,6 +2,7 @@ import {tightNativeBox} from './family-master.mjs';
 import {captureRightEdge,applyRightEdge} from './right-edge-anchors.mjs';
 import {solidBackgroundColor,extendSolidBackground} from './solid-background.mjs';
 import {masonryTextureProfile,paperTextureProfile,extendPaperTexture,installTextureBackgroundRenderer} from './texture-background.mjs';
+import {captureFooterSource,applyFooterAfterResize} from './band-runtime.mjs';
 
 
 // Runtime evidence only: a verified full-frame native texture may be inset by
@@ -64,6 +65,7 @@ export function resizeBackgroundOnly(state,width,height){
  installTextureBackgroundRenderer(state.F);
  if(state.fontError)throw Error(state.fontError);
  const parts=partitionBackground(state),edge=captureRightEdge(state,parts),boxes=parts.foreground.map(({object:o})=>{const b=o.getBoundingRect(),t=typeof o.text==='string'?tightNativeBox(o,b):null;return t?{left:t.x,top:t.y,width:t.w,height:t.h}:b;});
+ const footerSource=parts.separated&&parts.unresolved.length===0?captureFooterSource(state):null;
  const originalFrame=parts.backgrounds.find(p=>p.textureProfile)?.object.textureBackgroundFrame||{x:0,y:0,w:state.width,h:state.height};
  const l=Math.min(originalFrame.x,...boxes.map(b=>b.left)),t=Math.min(originalFrame.y,...boxes.map(b=>b.top));
  const r=Math.max(originalFrame.x+originalFrame.w,...boxes.map(b=>b.left+b.width)),b=Math.max(originalFrame.y+originalFrame.h,...boxes.map(b=>b.top+b.height));
@@ -87,6 +89,8 @@ export function resizeBackgroundOnly(state,width,height){
   o.setPositionByOrigin(new state.F.Point(x+(center.x-l)*scale,y+(center.y-t)*scale),'center','center');o.setCoords();
  }
  const rightEdge=applyRightEdge(state,edge,width,height);
+ const footerPlan=footerSource?applyFooterAfterResize(footerSource,state,width,height):null;
+ globalThis.coexFooterPrototype=footerPlan;
  const texture=parts.backgrounds.some(p=>p.textureProfile),photo=parts.backgrounds.some(p=>p.evidence==='separated-photo-cover');
  const reason=parts.separated?'배경만 새 규격에 맞췄습니다. 글씨·로고·상품의 상대 위치·겹침·비율을 유지합니다.':'독립 배경을 확인하지 못해 원본 전체를 보호했습니다. 배경 분리는 완료되지 않았습니다.';
  return {policy:'background-only-v1',sourceEpoch:state.epoch,width,height,inputKind:state.inputKind||'layered',path:'background-only',method:'background-only',status:!parts.separated||parts.unresolved.length||texture||photo?'review':'ready',reason,backgroundScope:photo?(stretchPhoto?'분리된 배경 사진을 화면에 늘려 맞췄습니다. 배경의 모양과 투명 영역을 확인하세요.':'분리된 배경 사진을 비율을 유지해 화면에 맞췄습니다. 가장자리 잘림과 투명 영역을 확인하세요.'):texture?'분리된 종이·벽돌 배경 질감을 바깥 영역에 반사 연결했습니다. 배경 추정·반복 무늬·이음선 검토 필요; AI 생성 아님':'확인된 단색·벡터 배경만 확장',crop:photo&&!stretchPhoto?'background-cover':'none',stretch:stretchPhoto,rightEdge,foregroundScale:scale,foregroundOffset:{x:x-l*scale,y:y-t*scale},separation:{status:parts.separated?'separated':'unseparated',backgrounds:parts.backgrounds.map(({id,name,evidence,textureProfile})=>({id,name,evidence,textureProfile})),foregroundIds:parts.foreground.map(p=>p.id),unresolved:parts.unresolved}};
