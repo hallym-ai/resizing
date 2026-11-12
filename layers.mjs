@@ -1,3 +1,5 @@
+import {validateOutsideReport} from './outside-status.mjs';
+import {canonicalOutside,outsideSourceChanged,validateOutside,installOutside} from './outside-recovery.mjs';
 import {installTextureBackgroundRenderer,validTextureFrame} from './texture-background.mjs';
 import {installReadabilityPanels} from './readability-panels.mjs';
 import {solidBackgroundColor,sourceBoundaryBackgroundColor} from './solid-background.mjs';
@@ -22,8 +24,9 @@ panel.innerHTML=`<h2>레이어로 열고 요소 편집</h2><p>레이어가 있�
 <p id="layerSummary" class="layer-summary"></p><div class="layer-tools layer-actions"><button id="layerApply" class="btn-primary">현재 화면을 리사이징에 적용</button><button id="layerPng" class="doc-btn">현재 화면 PNG 저장</button><button id="layerSvg" class="doc-btn">SVG 저장 · 글자·도형 벡터</button></div>
 </fieldset><details><summary>지원 범위와 사용한 오픈 소스</summary><p>Fabric.js 7.4.0 · ag-psd 31.0.3 (MIT). PSD는 RGB 8비트 / 픽셀 레이어 200개까지. 그룹 경로·표시·불투명도·위치·순서를 가져오며 마스크·블렌딩·조정·복잡한 효과를 재현하지 않습니다. 원본 PSD·PPTX로 다시 저장하지 않습니다. 이미지 글자를 편집 글자로 교체하면 글꼴·줄바꿈이 바뀔 수 있습니다. 설치된 글꼴을 사용합니다.</p><p>SVG 안의 스크립트·원격 참조·필터·애니메이션은 가져오지 않습니다. 외부 사진·로고는 PNG/JPG/WebP 파일로, 글꼴은 TTF/OTF/WOFF/WOFF2 파일로 직접 추가할 수 있습니다. 디자인 후보에서는 해당 자산과 글꼴을 사용해 규격별 크기·줄바꿈·여백을 조정합니다. 이 원본 입력 경로에서는 평면 이미지의 글자를 인식하지 않습니다. 일반 이미지·문서 입력에서 자동으로 인식합니다. 레이어 JSON은 이 편집기의 저장 형식입니다. 파일은 서버로 보내지 않습니다.</p><p><a href="https://github.com/fabricjs/fabric.js" target="_blank" rel="noopener noreferrer">Fabric.js 소스</a> · <a href="https://github.com/Agamnentzar/ag-psd" target="_blank" rel="noopener noreferrer">ag-psd 소스</a> · <a href="./vendor/layers/LICENSE-fabric.txt" target="_blank">Fabric MIT</a> · <a href="./vendor/layers/LICENSE-ag-psd.txt" target="_blank">ag-psd MIT</a></p></details></div>`;
 document.getElementById('dropzone').before(panel);
-const by=id=>document.getElementById(id),MAX_FILE=50*1024*1024,extra=['photoBoundaryOriginal','photoInstanceCrop','generatedPhotoSource','generatedRegionMask','generatedMethod','photoInstanceGroup','photoInstanceKind','photoInstanceWasLocked','photoInstanceWasVisible','perPixelTargetFind','originalPhotoSource','originalPhotoCutoutMethod','textureBackgroundFrame','readabilityPanelBox','layerName','layerRole','layerLocked','sourceText','cutoutMethod','cutoutBackground','sourceElementId','sourceElementType','nativeKind','sourceFontFamily','sourceStackIndex','layerRoleInferred','sourceImageFill','designAccent','designAccentSize','layerPriority','autoOmitted','layoutUnit','layoutRole','layoutBand','layoutOriginalText','layoutSourceWidth','layoutSourceHeight','layoutManualGroup','layoutManualRole','layoutOverlapBasis','layoutGraphSource'];
+const by=id=>document.getElementById(id),MAX_FILE=50*1024*1024,extra=['photoBoundaryOriginal','photoInstanceCrop','generatedPhotoSource','generatedRegionMask','generatedMethod','photoInstanceGroup','photoInstanceKind','photoInstanceWasLocked','photoInstanceWasVisible','perPixelTargetFind','originalPhotoSource','originalPhotoCutoutMethod','textureBackgroundFrame','readabilityPanelBox','layerName','layerRole','layerLocked','sourceText','cutoutMethod','cutoutBackground','sourceElementId','sourceElementType','nativeKind','sourceFontFamily','sourceStackIndex','layerRoleInferred','sourceImageFill','designAccent','designAccentSize','layerPriority','autoOmitted','layoutUnit','layoutRole','layoutBand','layoutOriginalText','layoutSourceWidth','layoutSourceHeight','layoutManualGroup','layoutManualRole','layoutOverlapBasis','layoutGraphSource','outsideRecoveryReview'];
 let F,canvas,initPromise,epoch=0,worker=null,workerReject=null,width=1080,height=1080,projectName='새 프로젝트',revision=0,linked=false,loading=false;
+let outsideRecoveryReport=null;globalThis.coexGetOutsideRecoveryReport=()=>outsideRecoveryReport;
 let sceneInputKind='layered',sceneSourceFormat='layer-json';
 let sceneSourceKey=null,sceneOutputKey=null,sceneManual=false,projectFonts=[],fontHandle=null;const marked=new Set();
 const sceneOutputCurrent=()=>{const key=globalThis.getLayerOutputContextKey?.();return !!key&&!!sceneOutputKey&&key===sceneOutputKey;};
@@ -101,6 +104,7 @@ globalThis.resolveLayerCompositionSource=(source,w,h)=>{
 function fit(){if(!canvas||by('layerWork').hidden)return;const available=Math.max(180,by('layerStage').clientWidth-26),zoom=Math.min(1,available/width,580/height);const displayWidth=Math.round(width*zoom),displayHeight=Math.round(height*zoom);if(canvas.getWidth()===displayWidth&&canvas.getHeight()===displayHeight&&Math.abs(canvas.getZoom()-zoom)<1e-8)return;canvas.setDimensions({width:displayWidth,height:displayHeight});canvas.setZoom(zoom);canvas.requestRenderAll();}
 function show(){mountSizeControls(true);syncOutputSize();by('layerWork').hidden=false;by('layerToggle').hidden=false;by('layerToggle').textContent='편집 화면 접기';fit();}
 function selection(){
+ window.dispatchEvent(new Event('coex:outside-recovery-change'));
  marked.clear();for(const item of canvas?.getActiveObjects()||[])marked.add(item);
  const active=current(),o=active?.isType('ActiveSelection')?null:active;by('layerProps').disabled=!o;by('layerCutoutNotice').hidden=true;if(o&&String(o.type).toLowerCase()==='image'&&o.cutoutMethod){by('layerCutoutNotice').hidden=false;by('layerCutoutNotice').textContent=o.cutoutMethod==='pptx-original-object'?'PPTX 원래 객체를 배경·다른 객체와 분리했습니다. 객체 이미지 속에 이미 합쳐진 글자는 별도 글자가 아닙니다.':o.cutoutMethod?.startsWith('poster-')?'PNG/JPG에서 윤곽을 추정한 요소입니다. 글씨 모양은 이미지로 보존되며 내용 편집 시 서체가 달라집니다. 이동 후 추정 배경과 가장자리를 확인하세요.':o.cutoutMethod==='unresolved'?'이 영역은 배경을 확실히 구별하지 못했습니다. 복잡한 배경·같은 색은 별도 원본이 필요할 수 있습니다.':'배경을 투명하게 분리한 요소입니다. 투명한 부분은 클릭 선택되지 않습니다.';}by('layerTypography').hidden=!textObject(o);if(textObject(o)){by('layerTextAlign').value=o.textAlign;by('layerLineHeight').value=o.lineHeight;by('layerCharSpacing').value=o.charSpacing;by('layerBold').checked=o.fontWeight==='bold'||Number(o.fontWeight)>=600;by('layerItalic').checked=o.fontStyle==='italic';}if(!o){by('layerTextProps').hidden=true;by('layerTextRebuild').hidden=true;list();return;}
  by('layerObjectName').value=o.layerName||o.type;by('layerRole').value=o.layerRole||'other';by('layerPriority').value=['keep','high','normal','optional'].includes(o.layerPriority)?o.layerPriority:'keep';by('layerX').value=Math.round(o.left);by('layerY').value=Math.round(o.top);by('layerVisible').checked=o.visible;by('layerLocked').checked=!!o.layerLocked;by('layerOpacity').value=Math.round(o.opacity*100);
@@ -120,6 +124,13 @@ function selectItems(items){
 }
 function releaseSelection(){const items=selected();canvas.discardActiveObject();return items;}
 function editableSelection(){return selected().filter(o=>!o.layerLocked&&o.visible);}
+// Fail closed: Fabric clone/group serialization cannot retain recovery renderers.
+function containsOutsideRecovery(object,seen=new Set()){
+ if(!object||seen.has(object))return false;seen.add(object);
+ if(object.trialOutsideRestore||object.outsideRecovery||object.outsideRecoveryReview)return true;
+ return (object.getObjects?.()||[]).some(child=>containsOutsideRecovery(child,seen));
+}
+function hasNestedOutsideRecovery(object){return (object?.getObjects?.()||[]).some(child=>containsOutsideRecovery(child));}
 
 function searchText(value){return String(value||'').normalize('NFKC').toLocaleLowerCase().replace(/\s+/g,' ').trim();}
 function isTextLayer(o){return textObject(o)||!!o.sourceText?.trim()||o.nativeKind==='text';}
@@ -293,8 +304,9 @@ function psdRead(buffer){return new Promise((resolve,reject)=>{
  active.postMessage(buffer,[buffer]);
  });}
 function validateJson(doc){
- if(doc?.format!=='coex-layer-project'||doc.version!==1||!dims(doc.width,doc.height)||!Array.isArray(doc.scene?.objects))fail('이 편집기에서 저장한 버전 1 레이어 JSON을 선택해 주세요.');
+ if(doc?.format!=='coex-layer-project'||![1,2].includes(doc.version)||!dims(doc.width,doc.height)||!Array.isArray(doc.scene?.objects))fail('이 편집기에서 저장한 버전 1 또는 2 레이어 JSON을 선택해 주세요.');
  if(Object.keys(doc.scene).some(k=>!['objects','version'].includes(k)))fail('지원하지 않는 프로젝트 속성입니다.');
+ if(doc.outsideRecoveryReport){if(doc.version!==2)fail('바깥 요소 확인 기록에는 프로젝트 버전 2가 필요합니다.');validateOutsideReport(doc.outsideRecoveryReport);}
  let count=0,nodes=0,strings=0;const allowed=new Set(['Rect','Circle','Ellipse','Triangle','Line','Path','Polyline','Polygon','Text','Textbox','IText','Image','Group']);
  const inspect=(value,depth=0,key='')=>{
   if(++nodes>1000000||depth>35)fail('프로젝트 구조가 너무 복잡합니다.');
@@ -308,7 +320,7 @@ function validateJson(doc){
   if(value.textureBackgroundFrame&&!validTextureFrame(value.textureBackgroundFrame))fail('잘못된 질감 원본 영역입니다.');
   if(Array.isArray(value)){if(value.length>200000)fail('배열이 너무 큽니다.');for(const v of value)inspect(v,depth+1,key);return;}
   for(const [k,v] of Object.entries(value)){
-   if(['__proto__','prototype','constructor','canvas','group','parent','backgroundImage','overlayImage','clipPath','layoutManager','resizeFilter'].includes(k))fail('지원하지 않는 프로젝트 속성: '+k);
+   if(['__proto__','prototype','constructor','canvas','group','parent','backgroundImage','overlayImage','clipPath','layoutManager','resizeFilter','trialOutsideRestore','__outsideTrialVisible','__outsideTrialImage','__outsideRenderInstalled'].includes(k))fail('지원하지 않는 프로젝트 속성: '+k);
    if(k==='type'&&typeof v==='string'&&!allowed.has(v)&&!['linear','radial','shadow'].includes(v))fail('지원하지 않는 요소 종류: '+v);
    if(k==='filters'&&(!Array.isArray(v)||v.length))fail('이미지 필터는 지원하지 않습니다.');
    inspect(v,depth+1,k);
@@ -317,7 +329,7 @@ function validateJson(doc){
  };
  inspect(doc.scene);
  // Require concrete safe classes at every object position before Fabric's class registry runs.
- const objectCheck=objects=>{for(const o of objects){if(!o||!allowed.has(o.type))fail('잘못된 요소입니다.');if(o.type==='Group'){if(!Array.isArray(o.objects))fail('잘못된 그룹입니다.');objectCheck(o.objects);}}};objectCheck(doc.scene.objects);
+ const objectCheck=(objects,depth=0)=>{let countOutside=0;for(const o of objects){if(!o||!allowed.has(o.type))fail('잘못된 요소입니다.');if(o.outsideRecoveryReview&&(doc.version!==2||o.outsideRecoveryReview!=='source-changed'||o.outsideRecovery))fail('잘못된 복원 검토 상태입니다.');if(o.outsideRecovery){if(doc.version!==2||depth||++countOutside>12)fail('복원 요소가 너무 많거나 그룹 안에 있습니다.');validateOutside(o.outsideRecovery,o);}if(o.type==='Group'){if(!Array.isArray(o.objects))fail('잘못된 그룹입니다.');objectCheck(o.objects,depth+1);}}};objectCheck(doc.scene.objects);
  assertProjectFontReferences(doc.scene.objects,doc.fonts||[]);
  return doc;
 }
@@ -344,13 +356,13 @@ function safeSvg(source){
 }
 async function validateAssets(objects){
  let pixels=0;const images=[];
- const visit=items=>{for(const o of items){if(o.type==='Image')images.push(o);if(o.objects)visit(o.objects);}};visit(objects);
+ const visit=items=>{for(const o of items){if(o.type==='Image')images.push(o);if(o.outsideRecovery){const p=validateOutside(o.outsideRecovery,o);images.push({src:p.src,expectedWidth:p.width,expectedHeight:p.height});}if(o.objects)visit(o.objects);}};visit(objects);
  // Decode once before Fabric to bound all embedded raster assets, including hidden layers.
- for(const o of images){if(!o.src)fail('그림 데이터가 없습니다.');const blob=await(await fetch(o.src)).blob(),bitmap=await createImageBitmap(blob);pixels+=bitmap.width*bitmap.height;const valid=dims(bitmap.width,bitmap.height);bitmap.close();if(!valid||pixels>64000000)fail('내장 그림 픽셀 합계가 너무 큽니다.');}
+ for(const o of images){if(!o.src)fail('그림 데이터가 없습니다.');const blob=await(await fetch(o.src)).blob(),bitmap=await createImageBitmap(blob);pixels+=bitmap.width*bitmap.height;const valid=dims(bitmap.width,bitmap.height)&&(!o.expectedWidth||(bitmap.width===o.expectedWidth&&bitmap.height===o.expectedHeight));bitmap.close();if(!valid||pixels>64000000)fail('내장 그림 픽셀 합계가 너무 큽니다.');}
 }
 async function openFile(file,{signal,beforeCommit,origin,sourceKey}={}){
  if(!file)return;if(origin!=='auto')window.dispatchEvent(new Event('coex:layer-source'));if(file.size>MAX_FILE){say('레이어 원본은 50MB 이하로 선택해 주세요.',true);return;}
- cancelImport();const token=epoch;const abort=()=>{if(token===epoch){cancelImport();say('레이어 열기를 취소했습니다.');}};if(signal?.aborted)return false;signal?.addEventListener('abort',abort,{once:true});loading=true;by('layerFields').disabled=true;say('원본의 요소와 레이어를 읽는 중…');let objects=[],pendingFonts=[],pendingFontHandle=null;
+ cancelImport();const token=epoch;const abort=()=>{if(token===epoch){cancelImport();say('레이어 열기를 취소했습니다.');}};if(signal?.aborted)return false;signal?.addEventListener('abort',abort,{once:true});loading=true;by('layerFields').disabled=true;say('원본의 요소와 레이어를 읽는 중…');let objects=[],pendingFonts=[],pendingFontHandle=null,pendingOutsideReport=null;
  try{
   await init();if(token!==epoch)return;
   const ext=file.name.split('.').pop().toLowerCase();let w,h,notes='',inputKind='layered',sourceFormat=ext;
@@ -366,17 +378,17 @@ async function openFile(file,{signal,beforeCommit,origin,sourceKey}={}){
    if(objects.length>200)fail('SVG 최상위 요소는 200개까지 지원합니다.');
    notes=' SVG 텍스트는 설치된 글꼴로 표시됩니다. 원본과 비교해 주세요.';
   }else if(ext==='json'){
-   const doc=validateJson(JSON.parse(await file.text()));inputKind=origin==='auto'?(doc.inputKind||'raster'):'layered';sourceFormat=origin==='auto'?(doc.sourceFormat||'image'):ext;w=doc.width;h=doc.height;pendingFonts=doc.fonts||[];pendingFontHandle=await loadProjectFonts(pendingFonts);for(const font of pendingFonts)F.cache.clearFontCache(font.family);await validateAssets(doc.scene.objects);objects=await F.util.enlivenObjects(doc.scene.objects);objects.forEach((o,i)=>normalize(o,'요소 '+(i+1)));
+   const doc=validateJson(JSON.parse(await file.text()));pendingOutsideReport=doc.outsideRecoveryReport||null;inputKind=origin==='auto'?(doc.inputKind||'raster'):'layered';sourceFormat=origin==='auto'?(doc.sourceFormat||'image'):ext;w=doc.width;h=doc.height;pendingFonts=doc.fonts||[];pendingFontHandle=await loadProjectFonts(pendingFonts);for(const font of pendingFonts)F.cache.clearFontCache(font.family);await validateAssets(doc.scene.objects);objects=await F.util.enlivenObjects(doc.scene.objects);await installOutside(objects,doc.scene.objects);if(doc.scene.objects.some(o=>o.outsideRecoveryReview))notes+=' 일부 요소는 원본 변경으로 바깥 연결이 중지되었습니다. 확인해 주세요.';objects.forEach((o,i)=>normalize(o,'요소 '+(i+1)));
   }else fail('PSD·SVG·이 편집기의 레이어 JSON을 선택해 주세요.');
   if(token!==epoch||signal?.aborted||(beforeCommit&&!beforeCommit())){objects.forEach(o=>o.dispose());if(token===epoch)say('원본이 바뀌어 레이어 열기를 취소했습니다.');return false;}
-  replace(objects,w,h,file.name.replace(/\.[^.]+$/,''),origin==='auto'?(sourceKey||null):null,{fonts:pendingFonts,handle:pendingFontHandle,inputKind,sourceFormat,manualSource:origin!=='auto'});pendingFontHandle=null;objects=[];say('레이어를 유지해 열었습니다. '+canvas.size()+'개 요소를 선택하고 이동하세요.'+notes);return true;
+  replace(objects,w,h,file.name.replace(/\.[^.]+$/,''),origin==='auto'?(sourceKey||null):null,{fonts:pendingFonts,handle:pendingFontHandle,inputKind,sourceFormat,manualSource:origin!=='auto',outsideReport:pendingOutsideReport});pendingFontHandle=null;objects=[];say('레이어를 유지해 열었습니다. '+canvas.size()+'개 요소를 선택하고 이동하세요.'+notes);return true;
  }catch(e){objects.forEach(o=>o.dispose());if(token===epoch)say(e instanceof SyntaxError?'JSON 파일을 읽지 못했습니다.':e.message,true);}
  finally{pendingFontHandle?.dispose();signal?.removeEventListener('abort',abort);if(token===epoch){loading=false;by('layerFields').disabled=false;}}
 }
 function replace(objects,w,h,name,sourceKey=null,bundle=null){
  cancelEditedPreview();
  marked.clear();if(bundle){fontHandle?.dispose();fontHandle=bundle.handle;projectFonts=bundle.fonts;}
- sceneSourceKey=sourceKey;sceneManual=bundle?.manualSource===true;if(bundle?.inputKind)sceneInputKind=bundle.inputKind;if(bundle?.sourceFormat)sceneSourceFormat=bundle.sourceFormat;
+ outsideRecoveryReport=bundle?.outsideReport||null;window.dispatchEvent(new Event('coex:outside-recovery-change'));sceneSourceKey=sourceKey;sceneManual=bundle?.manualSource===true;if(bundle?.inputKind)sceneInputKind=bundle.inputKind;if(bundle?.sourceFormat)sceneSourceFormat=bundle.sourceFormat;
  if(linked){if(sceneOutputCurrent())globalThis.invalidateLayerSnapshot?.();linked=false;}
  sceneOutputKey=globalThis.getLayerOutputContextKey?.()||null;canvas.discardActiveObject();const old=canvas.getObjects();canvas.remove(...old);old.forEach(o=>o.dispose());width=w;height=h;projectName=(name||'새 프로젝트').slice(0,120);revision=0;
  by('layerName').textContent=projectName;by('layerWidth').value=w;by('layerHeight').value=h;canvas.add(...objects);show();selection();fit();if(!historyRestoring)queueMicrotask(()=>window.dispatchEvent(new Event('coex:history-source')));
@@ -384,9 +396,10 @@ function replace(objects,w,h,name,sourceKey=null,bundle=null){
 function save(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 function scene(){
  ensureProjectTypography();
+ if(canvas.getObjects().some(hasNestedOutsideRecovery))fail('바깥 연결 요소가 들어 있는 그룹은 아직 저장할 수 없습니다. 원본 파일을 다시 열어 주세요.');
  // Fixed metadata format, embedded images. Remove layout managers so imports cannot invoke arbitrary strategies.
  const clean=value=>{if(Array.isArray(value))return value.map(clean);if(!value||typeof value!=='object')return value;const out={};for(const [k,v] of Object.entries(value)){if(k==='layoutManager'||k==='clipPath')continue;out[k]=clean(v);}return out;};
- return {format:'coex-layer-project',version:1,inputKind:sceneInputKind,sourceFormat:sceneSourceFormat,width,height,name:projectName,fonts:projectFonts,scene:{version:F.version,objects:canvas.toObject(extra).objects.map(clean)}};
+ const previousPrecision=F.config.NUM_FRACTION_DIGITS;let serialized;try{F.config.NUM_FRACTION_DIGITS=15;serialized=canvas.toObject(extra).objects.map(clean);}finally{F.config.NUM_FRACTION_DIGITS=previousPrecision;}const live=canvas.getObjects();if(serialized.length!==live.length)fail('복원 요소를 저장하지 못했습니다.');for(let i=0;i<live.length;i++){const o=live[i],m=canonicalOutside(o);if(m){delete serialized[i].outsideRecoveryReview;serialized[i].outsideRecovery=m;}else if(outsideSourceChanged(o))serialized[i].outsideRecoveryReview='source-changed';}return {format:'coex-layer-project',version:serialized.some(o=>o.outsideRecovery||o.outsideRecoveryReview)||outsideRecoveryReport?2:1,...(outsideRecoveryReport?{outsideRecoveryReport}:{}),inputKind:sceneInputKind,sourceFormat:sceneSourceFormat,width,height,name:projectName,fonts:projectFonts,scene:{version:F.version,objects:serialized}};
 }
 function snapshot(){ensureProjectTypography();canvas.discardActiveObject();const previous=canvas.viewportTransform;try{canvas.setViewportTransform([1,0,0,1,0,0]);return canvas.toCanvasElement(1,{left:0,top:0,width,height});}finally{canvas.setViewportTransform(previous);canvas.requestRenderAll();selection();}}
 function resize(){if(!canvas||loading)return;const w=Number(by('layerWidth').value),h=Number(by('layerHeight').value);if(!dims(w,h)){say('크기는 양의 정수, 한 변 12,000px / 합계 2,400만 픽셀 이하로 입력하세요.',true);return;}width=w;height=h;fit();changed();say('캔버스 크기를 바꿨습니다. 요소를 직접 재배치한 뒤 리사이징에 적용하세요.');}
@@ -411,7 +424,7 @@ let uploadedAssetRole='subject';
 by('layerImageAdd').onclick=()=>{uploadedAssetRole='subject';by('layerAsset').click();};
 by('layerLogoAdd').onclick=()=>{uploadedAssetRole='logo';by('layerAsset').click();};
 by('layerAsset').onchange=async e=>{const file=e.target.files[0],assetRole=uploadedAssetRole;e.target.value='';if(!file)return;const token=epoch;try{if(loading)fail('원본을 읽은 뒤 그림을 추가해 주세요.');if(file.size>30*1024*1024||!['image/png','image/jpeg','image/webp'].includes(file.type))fail('30MB 이하 PNG·JPG·WebP를 선택해 주세요.');const bitmap=await createImageBitmap(file);const w=bitmap.width,h=bitmap.height;bitmap.close();if(!dims(w,h))fail('그림은 2,400만 픽셀 이하로 선택해 주세요.');const reader=new FileReader(),src=await new Promise((resolve,reject)=>{reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('그림을 읽지 못했습니다.'));reader.readAsDataURL(file);});const o=await F.FabricImage.fromURL(src);if(token!==epoch){o.dispose();return;}const scale=Math.min(1,width*.6/w,height*.6/h);o.set({left:width*.1,top:height*.1,scaleX:scale,scaleY:scale,layerName:file.name,layerRole:assetRole,sourceElementId:'upload:'+crypto.randomUUID(),sourceElementType:'uploaded-'+assetRole});add(o);}catch(e){say(e.message,true);}};
-by('layerUngroup').onclick=()=>{const group=current();if(group?.type!=='group'){say('먼저 그룹 요소를 선택하세요.');return;}if(group.layerLocked){say('잠금을 해제한 뒤 그룹을 풀어 주세요.');return;}if(canvas.size()+group.size()-1>200){say('그룹을 풀면 요소가 200개를 넘습니다.',true);return;}const items=group.getObjects().map(o=>({o,matrix:o.calcTransformMatrix(),opacity:o.opacity*group.opacity,visible:o.visible&&group.visible})),at=canvas.getObjects().indexOf(group);canvas.discardActiveObject();canvas.remove(group);group.removeAll();for(let i=0;i<items.length;i++){const {o,matrix,opacity,visible}=items[i];F.util.applyTransformToObject(o,matrix);o.set({opacity,visible});canvas.insertAt(at+i,normalize(o));}group.dispose();changed();};
+by('layerUngroup').onclick=()=>{const group=current();if(group?.type!=='group'){say('먼저 그룹 요소를 선택하세요.');return;}if(group.layerLocked){say('잠금을 해제한 뒤 그룹을 풀어 주세요.');return;}if(hasNestedOutsideRecovery(group)){say('바깥 연결 요소가 포함된 그룹은 아직 안전하게 풀 수 없습니다. 원본 파일을 다시 열어 주세요.',true);return;}if(canvas.size()+group.size()-1>200){say('그룹을 풀면 요소가 200개를 넘습니다.',true);return;}const items=group.getObjects().map(o=>({o,matrix:o.calcTransformMatrix(),opacity:o.opacity*group.opacity,visible:o.visible&&group.visible})),at=canvas.getObjects().indexOf(group);canvas.discardActiveObject();canvas.remove(group);group.removeAll();for(let i=0;i<items.length;i++){const {o,matrix,opacity,visible}=items[i];F.util.applyTransformToObject(o,matrix);o.set({opacity,visible});canvas.insertAt(at+i,normalize(o));}group.dispose();changed();};
 function stack(mode){
  if(!canvas||loading)return;const all=canvas.getObjects(),items=selected().filter(o=>!o.layerLocked);if(!items.length){say('잠기지 않은 요소를 선택하세요.',true);return;}
  canvas.discardActiveObject();
@@ -458,6 +471,7 @@ by('layerDeselect').onclick=()=>{if(canvas)selectItems([]);};
 let duplicating=false;
 by('layerDuplicate').onclick=async()=>{
  if(!canvas||loading||duplicating)return;const items=editableSelection();if(!items.length){say('복제할 요소를 선택하세요.');return;}
+ if(items.some(o=>containsOutsideRecovery(o))){say('바깥 연결이 있는 요소는 아직 복제할 수 없습니다. 원본 요소를 그대로 사용해 주세요.',true);return;}
  // The same recursive count limit as project loading also applies to copies.
  const count=o=>1+(o.getObjects?.()||[]).reduce((n,x)=>n+count(x),0);
  if(canvas.getObjects().reduce((n,o)=>n+count(o),0)+items.reduce((n,o)=>n+count(o),0)>200){say('복제하면 요소가 200개를 넘습니다.',true);return;}
@@ -470,6 +484,7 @@ by('layerDuplicate').onclick=async()=>{
 };
 by('layerGroup').onclick=()=>{
  if(!canvas||loading)return;const items=editableSelection();if(items.length<2){say('그룹으로 묶을 요소를 2개 이상 선택하세요.');return;}
+ if(items.some(o=>containsOutsideRecovery(o))){say('바깥 연결이 있는 요소는 아직 그룹으로 묶을 수 없습니다. 개별 요소로 편집해 주세요.',true);return;}
  const all=canvas.getObjects(),ordered=all.filter(o=>items.includes(o));
  // Grouping changes interleaved paint order; require a contiguous stack.
  const indices=ordered.map(o=>all.indexOf(o));if(indices.at(-1)-indices[0]+1!==ordered.length){say('사이에 다른 요소가 있습니다. 앞뒤 순서를 연속으로 맞춘 뒤 묶어 주세요.');return;}
@@ -521,7 +536,7 @@ by('layerTextRebuild').onclick=()=>{const o=current();if(!o||(!o.sourceText&&o.n
 
 by('layerApply').onclick=()=>{if(!canvas||loading)return;try{if(!sceneOutputCurrent())fail('새 파일이나 슬라이드의 편집 요소가 준비된 뒤 적용하세요.');const c=snapshot();acceptWorkingSnapshot(c,projectName);say('현재 편집 화면을 리사이징에 적용했습니다. 아래에서 SNS 규격·맞춤 방식·ZIP 출력을 선택하세요. 요소를 수정하면 다시 적용해야 합니다.');}catch(e){say('화면을 적용하지 못했습니다: '+e.message,true);}};
 by('layerPng').onclick=()=>{if(!canvas||loading)return;try{const c=snapshot();c.toBlob(blob=>{c.width=c.height=0;if(blob)save(blob,projectName+'.png');else say('PNG 저장에 실패했습니다.',true);},'image/png');}catch(e){say('PNG 저장에 실패했습니다: '+e.message,true);}};
-by('layerSvg').onclick=()=>{if(!canvas||loading)return;try{ensureProjectTypography();}catch(error){say(error.message,true);return;}canvas.discardActiveObject();const previous=canvas.svgViewportTransformation;try{canvas.svgViewportTransformation=false;let svg=canvas.toSVG({width,height,viewBox:{x:0,y:0,width,height}});const fontCss=projectFonts.map(f=>'@font-face{font-family:'+JSON.stringify(f.family)+';src:url('+f.src+');font-weight:'+(/^(normal|bold|[1-9]00)$/.test(String(f.weight))?f.weight:'400')+';font-style:'+(['normal','italic','oblique'].includes(f.style)?f.style:'normal')+';}').join('');if(fontCss)svg=svg.replace('<defs>','<defs><style type="text/css"><![CDATA['+fontCss+']]></style>');const xml=new DOMParser().parseFromString(svg,'image/svg+xml');if(xml.querySelector('parsererror,script,foreignObject')||[...xml.querySelectorAll('*')].some(e=>[...e.attributes].some(a=>/^on/i.test(a.name))))fail('안전한 SVG로 저장할 수 없는 내용이 있습니다.');save(new Blob([svg],{type:'image/svg+xml'}),projectName+'.svg');say('글자·도형은 벡터로 SVG 저장했습니다. 사진과 효과 보존 이미지는 픽셀입니다.');}catch(error){say('SVG 저장을 완료하지 못했습니다: '+error.message,true);}finally{canvas.svgViewportTransformation=previous;selection();}};
+by('layerSvg').onclick=()=>{if(!canvas||loading)return;if(canvas.getObjects().some(o=>o.__outsideTrialVisible)){say('복원된 바깥 요소는 아직 SVG로 저장할 수 없습니다. PNG로 저장해 주세요.',true);return;}try{ensureProjectTypography();}catch(error){say(error.message,true);return;}canvas.discardActiveObject();const previous=canvas.svgViewportTransformation;try{canvas.svgViewportTransformation=false;let svg=canvas.toSVG({width,height,viewBox:{x:0,y:0,width,height}});const fontCss=projectFonts.map(f=>'@font-face{font-family:'+JSON.stringify(f.family)+';src:url('+f.src+');font-weight:'+(/^(normal|bold|[1-9]00)$/.test(String(f.weight))?f.weight:'400')+';font-style:'+(['normal','italic','oblique'].includes(f.style)?f.style:'normal')+';}').join('');if(fontCss)svg=svg.replace('<defs>','<defs><style type="text/css"><![CDATA['+fontCss+']]></style>');const xml=new DOMParser().parseFromString(svg,'image/svg+xml');if(xml.querySelector('parsererror,script,foreignObject')||[...xml.querySelectorAll('*')].some(e=>[...e.attributes].some(a=>/^on/i.test(a.name))))fail('안전한 SVG로 저장할 수 없는 내용이 있습니다.');save(new Blob([svg],{type:'image/svg+xml'}),projectName+'.svg');say('글자·도형은 벡터로 SVG 저장했습니다. 사진과 효과 보존 이미지는 픽셀입니다.');}catch(error){say('SVG 저장을 완료하지 못했습니다: '+error.message,true);}finally{canvas.svgViewportTransformation=previous;selection();}};
 globalThis.layerFileImport=openFile;
 globalThis.getLayerSceneSourceKey=()=>sceneSourceKey;
 globalThis.layerSnapshotDetached=()=>{cancelEditedPreview();linked=false;};
@@ -590,23 +605,23 @@ globalThis.coexLayerLayout={
 let historyRestore=0,historyRestoring=false;
 globalThis.coexLayerHistory={
  pause(){cancelImport();},
- capture(){return !canvas||loading?null:scene();},
+ capture(){if(!canvas||loading)return null;try{return scene();}catch(error){say(error.message,true);return null;}},
  async restore(doc){
   if(!canvas||loading||!sceneOutputCurrent())return false;
   const token=epoch,ticket=++historyRestore,before=revision;
-  assertProjectFontReferences(doc.scene.objects,doc.fonts||[]);const restoredFonts=await loadProjectFonts(doc.fonts||[]);F.cache.clearFontCache();let objects;try{objects=await F.util.enlivenObjects(doc.scene.objects);}catch(error){restoredFonts.dispose();throw error;}
+  assertProjectFontReferences(doc.scene.objects,doc.fonts||[]);const restoredFonts=await loadProjectFonts(doc.fonts||[]);F.cache.clearFontCache();let objects;try{if(doc.scene.objects.some(o=>o.outsideRecovery)){validateJson(doc);await validateAssets(doc.scene.objects);}objects=await F.util.enlivenObjects(doc.scene.objects);await installOutside(objects,doc.scene.objects);}catch(error){objects?.forEach(o=>o.dispose());restoredFonts.dispose();throw error;}
   if(token!==epoch||ticket!==historyRestore||before!==revision||loading||!sceneOutputCurrent()){objects.forEach(o=>o.dispose());restoredFonts.dispose();return false;}
   historyRestoring=true;
-  try{replace(objects.map((o,i)=>normalize(o,'요소 '+(i+1))),doc.width,doc.height,doc.name,sceneSourceKey,{fonts:doc.fonts||[],handle:restoredFonts,inputKind:doc.inputKind||'layered',sourceFormat:doc.sourceFormat||'layer-json',manualSource:sceneManual});revision=before+1;}
+  try{replace(objects.map((o,i)=>normalize(o,'요소 '+(i+1))),doc.width,doc.height,doc.name,sceneSourceKey,{fonts:doc.fonts||[],handle:restoredFonts,inputKind:doc.inputKind||'layered',sourceFormat:doc.sourceFormat||'layer-json',manualSource:sceneManual,outsideReport:doc.outsideRecoveryReport||null});revision=before+1;}
   finally{historyRestoring=false;}
-  window.dispatchEvent(new Event('coex:layer-edit'));linked=true;globalThis.invalidateLayerSnapshot?.({keepEditing:true});sceneOutputKey=globalThis.getLayerOutputContextKey?.()||null;queueEditedPreview();return true;
+  window.dispatchEvent(new Event('coex:layer-edit'));linked=true;globalThis.invalidateLayerSnapshot?.({keepEditing:true});sceneOutputKey=globalThis.getLayerOutputContextKey?.()||null;if(doc.scene.objects.some(o=>o.outsideRecoveryReview))say('원본이 바뀐 요소의 바깥 연결을 중지했습니다. 결과를 확인해 주세요.',true);queueEditedPreview();return true;
  },
  clear(){
   marked.clear();fontHandle?.dispose();fontHandle=null;projectFonts=[];
   ++historyRestore;window.dispatchEvent(new Event('coex:layer-source'));cancelImport();
   if(linked){globalThis.invalidateLayerSnapshot?.();linked=false;}
   if(canvas){canvas.discardActiveObject();const old=canvas.getObjects();canvas.remove(...old);old.forEach(o=>o.dispose());canvas.requestRenderAll();}
-  sceneSourceKey=null;sceneOutputKey=null;sceneManual=false;revision=0;width=height=1080;projectName='새 프로젝트';
+  outsideRecoveryReport=null;window.dispatchEvent(new Event('coex:outside-recovery-change'));sceneSourceKey=null;sceneOutputKey=null;sceneManual=false;revision=0;width=height=1080;projectName='새 프로젝트';
   mountSizeControls(false);by('layerWork').hidden=true;by('layerToggle').hidden=true;by('layerFile').value='';by('layerAsset').value='';
   by('layerPreset').value='';by('layerWidth').value=width;by('layerHeight').value=height;
   if(canvas)selection();say('새 파일을 선택해 시작하세요.');

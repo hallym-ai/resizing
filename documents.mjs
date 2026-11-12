@@ -68,9 +68,13 @@ function removeExternalRelationships(files) {
     const doc = new DOMParser().parseFromString(new TextDecoder().decode(data),'image/svg+xml');
     doc.querySelectorAll('script,foreignObject').forEach(node=>{node.remove();removed=true;});
     for(const node of doc.querySelectorAll('*')) for(const attr of [...node.attributes]) {
-      if (/^on/i.test(attr.name) || /(?:https?:|\/\/|javascript:|@import)/i.test(attr.value)) { node.removeAttribute(attr.name); removed=true; }
+      // CSS escapes or comments can disguise external URLs from literal checks.
+      // Limit this pre-render removal to CSS-bearing attributes; normal SVG
+      // geometry and already-supported internal paint references remain intact.
+      const css=/^(?:style|fill|stroke|filter|clip|clip-path|mask|mask-image|marker|marker-start|marker-mid|marker-end|cursor|color-profile|background|background-image|shape-inside|shape-subtract)$/i.test(attr.localName||attr.name);
+      if (/^on/i.test(attr.name) || /(?:https?:|\/\/|javascript:|@import)/i.test(attr.value) || css&&/(?:\\|\/\*|\*\/)/.test(attr.value)) { node.removeAttribute(attr.name); removed=true; }
     }
-    for(const node of doc.querySelectorAll('style')) if (/(?:https?:|\/\/|@import)/i.test(node.textContent)) {node.remove();removed=true;}
+    for(const node of doc.querySelectorAll('style')) if (/(?:https?:|\/\/|@import|\\|\/\*|\*\/)/i.test(node.textContent)) {node.remove();removed=true;}
     files.media.set(name,new TextEncoder().encode(new XMLSerializer().serializeToString(doc)));
   }
   return removed;
@@ -81,10 +85,16 @@ async function openPptx(buffer,signal) {
   const ppt = await pptModule; stale(signal);
   const limits={...ppt.RECOMMENDED_ZIP_LIMITS,maxEntries:100000,maxEntryUncompressedBytes:256*1024*1024,maxTotalUncompressedBytes:2*1024*1024*1024,maxMediaBytes:2*1024*1024*1024,maxConcurrency:2};
   const files=await ppt.parseZipLazyMedia(buffer,limits); stale(signal);
+  // Scratch provenance gate: keep references only to media already inflated
+  // by the existing renderer, BEFORE SVG sanitization. Never inflate an extra
+  // ZIP entry for this gate; missing or over-budget data yields review.
+  const rawSlideRels=new Map(files.slideRels||[]),rawMedia=new Map();let rawMediaBytes=0;
+  const keepRaw=(name,data)=>{const b=data instanceof Uint8Array?data:data instanceof ArrayBuffer?new Uint8Array(data):null;if(!b||b.byteLength>3000000||rawMedia.has(name)||rawMediaBytes+b.byteLength>24000000)return;rawMedia.set(name,b);rawMediaBytes+=b.byteLength;};
   let externalRemoved=removeExternalRelationships(files);
   // Media is inflated only when a selected slide asks for it. Sanitize lazy SVG too.
   const resolver=files.mediaResolver,resolve=resolver.resolve.bind(resolver);
   resolver.resolve=async path=>{stale(signal);const result=await resolve(path);stale(signal);
+    if(result)keepRaw(result.mediaPath,result.data);
     if(result&&result.mediaPath.toLowerCase().endsWith('.svg')){
       const holder={presentationRels:'<Relationships/>',media:new Map([[result.mediaPath,result.data]])};
       if(removeExternalRelationships(holder))externalRemoved=true;result.data=holder.media.get(result.mediaPath);files.media.set(result.mediaPath,result.data);
@@ -97,7 +107,7 @@ async function openPptx(buffer,signal) {
     count:presentation.slides.length,kind:'pptx',get externalRemoved(){return externalRemoved;},
     get mediaStats(){return{loaded:files.media.size,bytes:resolver.loadedBytes,total:resolver.totalCount};},
     async render(index,pageSignal,onProgress) {
-      files.media.clear();resolver.loadedPaths?.clear();
+      files.media.clear();resolver.loadedPaths?.clear();rawMedia.clear();rawMediaBytes=0;
       stale(pageSignal); if(disposed) throw new DOMException('Cancelled','AbortError');
       captureModule ||= import(vendor('capture/html-to-image.js'));
       await captureModule; stale(pageSignal);
@@ -123,10 +133,10 @@ async function openPptx(buffer,signal) {
         });
         stale(pageSignal); if(disposed) throw new DOMException('Cancelled','AbortError');
         let layerProject=null,nativeError=null;
-        try{if(partial)throw Error('일부 PPTX 객체를 표시하지 못해 정확한 객체 분리를 중단했습니다.');layerProject=await extractPptxObjects(handle.element,canvas,{width:presentation.width,height:presentation.height,pixelRatio:targetScale(presentation.width,presentation.height),signal:pageSignal,onProgress});layerProject.fonts=await embeddedProjectFonts(presentation,ppt,layerProject.scene.objects);}
+        try{if(partial)throw Error('일부 PPTX 객체를 표시하지 못해 정확한 객체 분리를 중단했습니다.');const slidePart=presentation.slides[index]?.slidePath,slideName=slidePart?.match(/^ppt\/slides\/(slide[1-9]\d*\.xml)$/)?.[1],provenance=slideName?{slidePart,slideXml:files.slides.get(slidePart),relsXml:rawSlideRels.get('ppt/slides/_rels/'+slideName+'.rels'),readMedia:async(path,limit)=>{const b=rawMedia.get(path);return b&&b.byteLength<=limit?b:null}}:null;layerProject=await extractPptxObjects(handle.element,canvas,{width:presentation.width,height:presentation.height,pixelRatio:targetScale(presentation.width,presentation.height),signal:pageSignal,onProgress,provenance});layerProject.fonts=await embeddedProjectFonts(presentation,ppt,layerProject.scene.objects);}
         catch(error){stale(pageSignal);nativeError=error.message||'PPTX 원본 객체를 분리하지 못했습니다.';}
         stale(pageSignal);return {canvas,partial,layerProject,nativeError};
-      } finally { handle?.dispose(); host.remove(); }
+      } finally { rawMedia.clear();rawMediaBytes=0;handle?.dispose(); host.remove(); }
     },
     async dispose() { disposed=true; files.media.clear();files.mediaResolver?.entries?.clear(); }
   };

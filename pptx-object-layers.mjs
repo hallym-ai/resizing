@@ -1,4 +1,10 @@
+import {sourceDigest} from './outside-recovery.mjs';
 import {nativeText,nativeShape} from './pptx-native-elements.mjs';
+import {readSimplePicture} from './dom-picture-evidence.mjs';
+import {outsidePictureSvg} from './outside-picture-svg.mjs';
+import {mergeOutsideCandidate} from './outside-merge-runtime.mjs';
+import {derivePictureEvidence} from './ooxml-picture-provenance.mjs';
+import {matchRendererGeometry} from './renderer-geometry-gate.mjs';
 /* Separate PPTX drawing objects before any raster OCR or colour segmentation. */
 const stale=signal=>{if(signal.aborted)throw new DOMException('Cancelled','AbortError');};
 function image(src,w,h,x,y,name,role='other',text='',locked=false){return{type:'Image',version:'7.4.0',originX:'left',originY:'top',left:x,top:y,width:w,height:h,scaleX:1,scaleY:1,angle:0,opacity:1,visible:true,src,layerName:name,layerRole:role,layerLocked:locked,sourceText:text,crossOrigin:null,filters:[]};}
@@ -26,7 +32,9 @@ export async function preparePptxCapture(root,{signal}={}){
  })();preparedMedia.set(root,task);try{return await task;}catch(error){preparedMedia.delete(root);throw error;}
 }
 
-export async function extractPptxObjects(root,original,{width,height,pixelRatio,signal,onProgress}){
+export async function extractPptxObjects(root,original,{width,height,pixelRatio,signal,onProgress,provenance}){
+ // Isolated diagnostic; never used to change a visible or saved object.
+ const outsideProbe={status:'diagnostic-only',records:[]};globalThis.coexOriginalOutsideProbe=outsideProbe;
  const mediaCoverage=await preparePptxCapture(root,{signal});
  const leaves=[...root.querySelectorAll('[data-coex-pptx-node]')].filter(el=>el.dataset.coexPptxType!=='group'),nodes=[];
  for(const el of leaves){const info=el.coexPptxInfo||{},text=el.querySelector('[data-coex-pptx-text]');
@@ -58,13 +66,50 @@ export async function extractPptxObjects(root,original,{width,height,pixelRatio,
    onProgress?.(i+1,nodes.length);await new Promise(resolve=>setTimeout(resolve,0));continue;
   }
   const styled=[];if(info.type==='text')for(const ancestor of ancestors)if(ancestor!==el){styled.push([ancestor,ancestor.style.backgroundColor,ancestor.style.backgroundImage,ancestor.style.boxShadow]);ancestor.style.backgroundColor='transparent';ancestor.style.backgroundImage='none';ancestor.style.boxShadow='none';}
-  let canvas,cropped;
-  try{canvas=await capture(filter);stale(signal);cropped=crop(canvas);if(!cropped){if(el.querySelector('svg image'))throw Error('이미지 채움 도형을 표시하지 못해 개별 요소 분리를 중단했습니다. 원본 화면을 확인하세요.');empty++;continue;}
+  let canvas,cropped,outsideRec=null;
+  try{canvas=await capture(filter);stale(signal);cropped=crop(canvas);
+   if(info.type==='picture'){
+    const rr=root.getBoundingClientRect(),er=el.getBoundingClientRect(),left=er.left-rr.left,top=er.top-rr.top,right=er.right-rr.left,bottom=er.bottom-rr.top;
+    if([left,top,right,bottom].every(Number.isFinite)&&(left<0||top<0||right>width||bottom>height)){
+     let rec;try{if(outsideProbe.records.length>=12){rec={name:info.name,id:info.id,reason:'candidate-limit-review'};}else{const evidence=await readSimplePicture(el,root,{signal,width,height});
+      if(!evidence.ok)rec={name:info.name,id:info.id,reason:evidence.reason};
+      else{const match=String(info.id||'').match(/^slide:(\d+)$/);let source=null,geometry=null;
+       if(match&&provenance?.slideXml&&provenance?.relsXml&&provenance?.slidePart&&typeof provenance.readMedia==='function'){
+        const response=await fetch(evidence.mediaDataUrl,{signal});const displayed=new Uint8Array(await response.arrayBuffer());stale(signal);
+        const sourceRecords=await derivePictureEvidence({...provenance,onlyId:match[1],displayedBytes:async id=>id===match[1]?displayed:null});source=sourceRecords[0]||null;
+        if(source&&(source.status==='source-verified'||source.status==='source-equivalent'))geometry=matchRendererGeometry(source,evidence.object);
+       }
+       if(!source||!['source-verified','source-equivalent'].includes(source.status)||geometry?.status!=='geometry-matched')rec={name:info.name,id:info.id,reason:'source-review:'+(source?.reason||'unavailable')+':'+(geometry?.reason||'not-matched')};
+       else{const padding={left:Math.ceil(Math.max(0,-left)+2),right:Math.ceil(Math.max(0,right-width)+2),top:Math.ceil(Math.max(0,-top)+2),bottom:Math.ceil(Math.max(0,bottom-height)+2)};
+       const trial=outsidePictureSvg({slideWidth:width,slideHeight:height,padding,object:evidence.object,mediaDataUrl:evidence.mediaDataUrl,maxPixels:4000000,insetX:2*width/captureWidth,insetY:2*height/captureHeight});
+       rec=trial.ok?{name:info.name,id:info.id,status:'unverified-render',sourceStatus:source.status,sourceSha:source.media.sha256,geometryStatus:geometry.status,geometry:evidence.object,viewBox:trial.viewBox,svg:trial.svg}:{name:info.name,id:info.id,reason:trial.reason};
+      }}}
+     }catch(e){if(signal.aborted)throw e;rec={name:info.name,id:info.id,reason:String(e)};}
+     outsideRec=rec;outsideProbe.records.push(rec);
+    }
+   }
+   else{
+    // Native conversion failed: this canvas-captured object may have already
+    // lost off-slide pixels. Record the limitation; never invent a patch.
+    const rr=root.getBoundingClientRect(),er=el.getBoundingClientRect(),left=er.left-rr.left,top=er.top-rr.top,right=er.right-rr.left,bottom=er.bottom-rr.top;
+    if([left,top,right,bottom].every(Number.isFinite)&&(left<0||top<0||right>width||bottom>height))outsideProbe.records.push({name:info.name,id:info.id,reason:'non-picture-capture-boundary-review'});
+   }
+   if(!cropped){if(outsideRec)outsideRec.mergeReason='off-slide-only-not-retained';if(el.querySelector('svg image'))throw Error('이미지 채움 도형을 표시하지 못해 개별 요소 분리를 중단했습니다. 원본 화면을 확인하세요.');empty++;continue;}
    const c=cropped.canvas;pixels+=c.width*c.height;
    const text=String(info.text||'').slice(0,20000),name=(text?text.replace(/\s+/g,' ').trim():String(info.name||`객체 ${i+1}`)).slice(0,170),full=c.width>=captureWidth*.97&&c.height>=captureHeight*.97&&cropped.x<=2&&cropped.y<=2;
    const role=/로고|logo/i.test(String(info.name||name))?'logo':full&&!text?'background':text?'other':info.type==='picture'?'subject':'decoration';
    const o=image(c.toDataURL('image/png'),c.width,c.height,cropped.x,cropped.y,text?name:`PPTX ${name}`,role,text,role==='background');
    o.left*=sx;o.top*=sy;o.scaleX=sx;o.scaleY=sy;
+   // Diagnostic trial only: exposed outside content remains review status.
+   // A full-width edge strip may be the existing footer or background, not
+   // movable decoration. Keep it on the original path until its role is proven.
+   const edgeStrip=(cropped.x<=2&&cropped.x+c.width>=captureWidth-2&&(cropped.y<=2||cropped.y+c.height>=captureHeight-2))||(cropped.y<=2&&cropped.y+c.height>=captureHeight-2&&(cropped.x<=2||cropped.x+c.width>=captureWidth-2));
+   if(outsideRec?.status==='unverified-render'&&!full&&!edgeStrip){
+    try{const merged=await mergeOutsideCandidate({svg:outsideRec.svg,viewBox:outsideRec.viewBox,baseCanvas:c,cropX:cropped.x,cropY:cropped.y,captureWidth,captureHeight,width,height,sx,sy,signal});
+     if(merged.ok){o.outsideRecovery={version:1,status:'unverified',visible:false,baseSourceDigest:await sourceDigest(o.src),outer:merged.outer,slide:{width:W,height:H},original:{left:o.left,top:o.top,width:o.width,height:o.height,scaleX:o.scaleX,scaleY:o.scaleY,cropX:0,cropY:0}};outsideRec.stored=true;outsideRec.added=merged.added;}
+     else outsideRec.mergeReason=merged.reason;
+    }catch(e){if(signal.aborted)throw e;outsideRec.mergeReason=String(e)}
+   }else if(outsideRec&&edgeStrip)outsideRec.mergeReason='ambiguous-edge-strip';
    o.nativeKind='image';o.sourceStackIndex=i;o.layerRoleInferred=true;o.sourceImageFill=!!el.querySelector('svg image');
    o.sourceElementId=String(info.id||i);o.sourceElementType=info.type||'shape';o.cutoutMethod='pptx-original-object';objects.push(o);
   }finally{for(const [ancestor,color,bg,shadow]of styled){ancestor.style.backgroundColor=color;ancestor.style.backgroundImage=bg;ancestor.style.boxShadow=shadow;}if(canvas)canvas.width=canvas.height=0;if(cropped)cropped.canvas.width=cropped.canvas.height=0;}
@@ -76,5 +121,7 @@ export async function extractPptxObjects(root,original,{width,height,pixelRatio,
  const editableTextCount=objects.filter(o=>o.nativeKind==='text').length,vectorCount=objects.filter(o=>o.nativeKind==='vector').length;
  warnings.push(`편집 글자 ${editableTextCount}개 · 벡터 도형 ${vectorCount}개. 표·차트와 지원하지 않는 복잡한 효과는 원본 객체 이미지로 보존합니다. 원본 글꼴이 없으면 대체 글꼴로 표시될 수 있습니다.`);
  const ref=image(original.toDataURL('image/png'),W,H,0,0,'PPTX 원본 비교용 · 숨김','background','',true);ref.visible=false;objects.unshift(ref);
- return{format:'coex-layer-project',version:1,width:W,height:H,analysis:{engine:'pptx-original-objects',mediaCoverage,workingPixelRatio:captureRatio,sourcePixelRatio:pixelRatio,objectCount:objects.length-2,textCount,pictureCount,editableTextCount,vectorCount,warnings},scene:{version:'7.4.0',objects}};
+ const recoveryRecords=outsideProbe.records.slice(0,200).map((r,i)=>({id:String(r.id||`unknown:${i}`).slice(0,120),name:String(r.name||'요소').slice(0,170),candidate:!!r.stored,reason:r.stored?'':r.mergeReason==='off-slide-only-not-retained'?'off-slide':r.reason==='candidate-limit-review'?'limit':r.mergeReason==='ambiguous-edge-strip'?'ambiguous':r.reason?'unsupported':'other'}));
+ const outsideRecoveryReport=recoveryRecords.length?{version:1,records:recoveryRecords,omitted:Math.max(0,outsideProbe.records.length-200)}:null;
+ return{format:'coex-layer-project',version:objects.some(o=>o.outsideRecovery)||outsideRecoveryReport?2:1,...(outsideRecoveryReport?{outsideRecoveryReport}:{}),width:W,height:H,analysis:{engine:'pptx-original-objects',mediaCoverage,workingPixelRatio:captureRatio,sourcePixelRatio:pixelRatio,objectCount:objects.length-2,textCount,pictureCount,editableTextCount,vectorCount,warnings},scene:{version:'7.4.0',objects}};
 }

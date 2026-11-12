@@ -1,3 +1,4 @@
+import {mountOutsideStatus} from './outside-status.mjs';
 import {promoteNativeUnderlay} from './native-underlay.mjs';
 import './main-raster-background.mjs';
 import {partitionBackground,resizeBackgroundOnly,separationPreviews,trackNativeBackgroundFit} from './background-only.mjs';
@@ -23,6 +24,7 @@ const $=id=>document.getElementById(id);
 const controls=document.createElement('section');controls.className='reflow-controls';controls.id='reflowControls';
 controls.innerHTML=`<h3>1단계 · 배경만 리사이징</h3><p>글씨·로고·상품·장식의 상대 위치와 겹침은 유지하고, 확인된 배경만 새 규격에 맞춥니다. 작은 규격에서 잘리지 않도록 필요한 경우 요소 전체를 함께 균등 축소합니다. 단색·불투명 벡터 배경과 독립된 밝은 종이 질감 후보를 확장합니다. 질감은 원본 영역을 유지하고 바깥만 반사 연결하며, 배경 추정·반복 무늬·이음선은 검토가 필요합니다. 사진 배경을 AI로 생성하지 않습니다.</p><div class="reflow-row"><label>출력 규격<select id="reflowRatio"><option value="">자유 크기 · 너비/높이 입력</option><option value="1080x1080">정사각형 · 1080 × 1080</option><option value="1920x1080">가로 · 1920 × 1080</option><option value="1080x1920">세로 · 1080 × 1920</option><option value="1800x600">가로 배너 · 1800 × 600</option></select></label><button class="doc-btn" id="reflowApply">배경만 크기 적용</button><button class="doc-btn" id="reflowUndo" disabled>크기 변경 전으로</button><button id="reflowNext" hidden disabled>다른 배치 적용</button></div><p id="reflowStatus" role="status" aria-live="polite">파일을 넣으면 배경과 보호 요소를 구분합니다.</p><details id="backgroundSeparationDetails"><summary>배경 / 보호할 요소 확인 · 필요할 때 열기</summary><p id="backgroundSeparationStatus" role="status"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><figure style="margin:0"><figcaption>확인된 배경</figcaption><img id="backgroundOnlyPreview" alt="다른 요소를 제외한 배경" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure><figure style="margin:0"><figcaption>보호할 요소 · 상대배치 유지</figcaption><img id="foregroundOnlyPreview" alt="배경과 구분된 보호 요소" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure></div><p>합쳐진 이미지나 분리 근거가 부족한 객체는 보호 요소로 남습니다. 분리 미완료 상태를 성공으로 표시하지 않습니다.</p></details><details><summary>자유 비율 입력</summary><div class="reflow-custom"><label>가로 비율<input id="reflowCustomX" type="number" min="1" max="10000" value="16"></label><span>:</span><label>세로 비율<input id="reflowCustomY" type="number" min="1" max="10000" value="9"></label><button id="reflowCustomApply" class="doc-btn">이 비율로 배경 변경</button></div></details>`;
 $('layerFields').prepend(controls);
+mountOutsideStatus($('reflowStatus'),()=>globalThis.coexGetOutsideRecoveryReport?.()||null,()=>globalThis.coexLayerLayout?.read());
 // Output dimensions have one visible owner. Legacy nodes stay for compatibility.
 $('reflowRatio').closest('label').style.display='none';
 $('reflowApply').style.display='none';
@@ -35,7 +37,7 @@ const layoutSelections=new Map();
 let candidateContext='';
 let lastLayoutEngine='preserved-source-layout';let lastAutomaticDecision=null;
 let baseline=null,undo=null,lastRevision=-1,queued=null,composing=false,sizeTimer=null;
-const attrs=['textureBackgroundFrame','left','top','scaleX','scaleY','angle','originX','originY','flipX','flipY','width','height','fontSize','textAlign','textBackgroundColor','readabilityPanelBox','layerRole','styles','splitByGrapheme','lineHeight','direction','radius','strokeWidth','rx','ry','visible','layoutOverlapBasis','layoutGraphSource'];
+const attrs=['__outsideTrialVisible','objectCaching','textureBackgroundFrame','left','top','scaleX','scaleY','angle','originX','originY','flipX','flipY','width','height','fontSize','textAlign','textBackgroundColor','readabilityPanelBox','layerRole','styles','splitByGrapheme','lineHeight','direction','radius','strokeWidth','rx','ry','visible','layoutOverlapBasis','layoutGraphSource'];
 const tell=(text,error=false)=>{$('reflowStatus').textContent=text;$('reflowStatus').classList.toggle('error',error);};
 const api=()=>globalThis.coexLayerLayout;
 const nativeText=o=>['text','textbox','itext'].includes(String(o.type).toLowerCase());
@@ -302,16 +304,48 @@ function targetInputs(w,h){for(const [id,value]of [['layerWidth',w],['layerHeigh
 let atomicResizeSerial=0;
 globalThis.coexCancelEditorResize=()=>{atomicResizeSerial++;clearTimeout(sizeTimer);};
 function trustedEditorState(state){const source=globalThis.getLayerAnalysisSource?.(),context=globalThis.getLayerOutputContextKey?.();return !!state&&!!context&&state.sceneOutputKey===context&&(state.sceneManual||(source?!!state.sourceKey&&state.sourceKey===source.key:state.linked));}
+// Scratch review experiment only: source-crop provenance is not yet verified.
+async function preloadOutsideTrial(state){
+ await Promise.all(state.objects.filter(o=>o.trialOutsideRestore?.outer?.src&&!o.__outsideTrialImage).map(o=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>{o.__outsideTrialImage=im;resolve()};im.onerror=()=>reject(Error('outside trial image load failed'));im.src=o.trialOutsideRestore.outer.src;})));
+ for(const o of state.objects.filter(o=>o.__outsideTrialImage&&!o.__outsideRenderInstalled)){
+  o.__outsideBaseElement=o.getElement?.();o.__outsideBaseSource=o.getSrc?.();
+  const render=o._render;o._render=function(ctx){if(!this.__outsideTrialVisible){render.call(this,ctx);return;}const m=this.trialOutsideRestore,b=m.original,p=m.outer;
+   const sourceChanged=!this.__outsideBaseElement||this.getElement?.()!==this.__outsideBaseElement||this.getSrc?.()!==this.__outsideBaseSource||this.width!==b.width||this.height!==b.height||(this.cropX??0)!==b.cropX||(this.cropY??0)!==b.cropY;
+   const unsupported=this.group||this.clipPath||this.shadow||this.filters?.length||(this.globalCompositeOperation&&this.globalCompositeOperation!=='source-over')||this.originX!=='left'||this.originY!=='top';
+   if(sourceChanged||unsupported){if(!this.__outsideReview){this.__outsideReview=true;tell('복원된 요소의 원본이나 자르기·효과가 변경되어 바깥 연결을 중지했습니다. 요소를 확인해 주세요.',true);}render.call(this,ctx);return;}
+   this.__outsideReview=false;
+   const x=(p.left-b.left)/b.scaleX-this.width/2,y=(p.top-b.top)/b.scaleY-this.height/2;
+   const slideX=-b.left/b.scaleX-this.width/2,slideY=-b.top/b.scaleY-this.height/2;
+   const tr=ctx.getTransform();
+   if(Math.abs(tr.b)<1e-8&&Math.abs(tr.c)<1e-8&&tr.a>0&&tr.d>0&&ctx.canvas.width*ctx.canvas.height<=24000000){
+    const left=Math.ceil(tr.e+tr.a*slideX-.5),top=Math.ceil(tr.f+tr.d*slideY-.5),right=Math.ceil(tr.e+tr.a*(slideX+m.slide.width/b.scaleX)-.5),bottom=Math.ceil(tr.f+tr.d*(slideY+m.slide.height/b.scaleY)-.5);
+    ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.beginPath();ctx.rect(-100000,-100000,200000,200000);ctx.rect(left,top,right-left,bottom-top);ctx.clip('evenodd');ctx.setTransform(tr);ctx.drawImage(this.__outsideTrialImage,x,y,p.width,p.height);ctx.restore();
+   }else if(!this.__outsideReview){this.__outsideReview=true;tell('회전·반전 또는 큰 화면에서 바깥 연결을 표시할 수 없어 원본 요소를 유지했습니다. 결과를 확인해 주세요.',true);}
+   render.call(this,ctx);
+  };o.__outsideRenderInstalled=true;
+ }
+}
+globalThis.coexInstallOutsideTrialForObjects=preloadOutsideTrial;
+function exposeOutsideTrial(state){
+ let applied=0;
+ if(globalThis.coexDisableOutsideTrial){globalThis.coexOutsideTrialApplied=0;return;}
+ for(const o of state.objects){const m=o.trialOutsideRestore,b=m?.original;if(!b||!o.__outsideTrialImage||o.angle||o.flipX||o.flipY||o.originX!=='left'||o.originY!=='top'||o.width!==b.width||o.height!==b.height||!b.scaleX||!b.scaleY)continue;
+  o.set({__outsideTrialVisible:true,objectCaching:false});o.dirty=true;o.setCoords();applied++;
+ }
+ globalThis.coexOutsideTrialApplied=applied;
+}
 async function resizeEditorAtomic(width,height,{preset=null}={}){
  const serial=++atomicResizeSerial;clearTimeout(sizeTimer);const state=api()?.read();
  if(!trustedEditorState(state)){tell('새 파일이나 슬라이드의 편집 요소가 준비된 뒤 규격을 선택하세요.',true);return false;}
  if(!validLayoutSize(width,height)){tell('규격의 너비와 높이를 확인하세요.',true);return false;}
+ try{await preloadOutsideTrial(state);}catch(error){tell(error.message,true);return false;}
+ if(serial!==atomicResizeSerial||api()?.read()?.revision!==state.revision||api()?.read()?.epoch!==state.epoch)return false;
  const liveGuard=api()?.captureAtomicLiveGuard?.();if(!liveGuard){tell('다중선택을 해제하고 요소 이동이나 편집을 마친 뒤 다시 시도하세요.',true);return false;}
  const context=state.sceneOutputKey,previous=capture(state),base=baseFor(state),expected={epoch:state.epoch,revision:state.revision};
  const current=()=>{const s=api()?.read();return serial===atomicResizeSerial&&trustedEditorState(s)&&s.epoch===expected.epoch&&s.revision===expected.revision&&s.sceneOutputKey===context&&Number($('wInput').value)===width&&Number($('hInput').value)===height;};
  const restoreInputs=()=>{const s=api()?.read();if(serial===atomicResizeSerial&&s&&s.epoch===expected.epoch&&s.revision===expected.revision&&s.sceneOutputKey===context&&globalThis.getLayerOutputContextKey?.()===context)targetInputs(s.width,s.height);};
  let target,promise,prepared,result;targetInputs(width,height);composing=true;
- try{restore(base);result=resizeBackgroundOnly({...state,width:base.width,height:base.height},width,height);target=capture({...state,width,height});promise=api().prepareAtomicSnapshot(width,height,{...expected,decision:result});}
+ try{restore(base);result=resizeBackgroundOnly({...state,width:base.width,height:base.height},width,height);exposeOutsideTrial(state);target=capture({...state,width,height});promise=api().prepareAtomicSnapshot(width,height,{...expected,decision:result});}
  catch(error){restoreInputs();tell(error.message,true);return false;}
  finally{restore(previous);api()?.refresh();composing=false;}
  try{prepared=await promise;if(!current()){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);return false;}
