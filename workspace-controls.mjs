@@ -1,31 +1,27 @@
 import './layers.mjs';
+import {HistoryStore} from './history-store.mjs';
 const RELEASE='protected-background-20261018-2',PRODUCTION='https://coex-image-resize-20261017.shrewd-tapir-9956.chatgpt.site';
 const $=id=>document.getElementById(id),bar=document.createElement('nav');
 bar.className='workspace-controls';bar.setAttribute('aria-label','작업 및 게시 확인');
 bar.innerHTML=`<div class="workspace-buttons"><button id="workspaceBack" type="button">← 뒤로 가기</button><button id="workspaceResume" type="button" hidden>편집 계속</button><button id="workspaceUndo" type="button" disabled>↶ 실행 취소</button><button id="workspaceRedo" type="button" disabled>↷ 다시 실행</button><button id="workspaceReset" type="button">초기화</button></div><div class="workspace-release"><span id="workspaceRelease" role="status">실행 버전 확인 중…</span><button id="workspaceCheck" type="button">업데이트 확인</button></div><p id="workspaceStatus" role="status" aria-live="polite"></p>`;
 document.querySelector('main').prepend(bar);
 const api=()=>globalThis.coexLayerHistory;
-let entries=[],cursor=-1,busy=false,source=0,backState=null;
+const history=new HistoryStore();let busy=false,source=0,backState=null;
 const notice=text=>$('workspaceStatus').textContent=text;
-function buttons(){ $('workspaceUndo').disabled=busy||cursor<=0;$('workspaceRedo').disabled=busy||cursor<0||cursor>=entries.length-1; }
+function buttons(){ $('workspaceUndo').disabled=busy||!history.canUndo();$('workspaceRedo').disabled=busy||!history.canRedo(); }
 function capture(fresh=false){
  const doc=api()?.capture();
- if(fresh){++source;entries=[];cursor=-1;backState=null;$('workspaceResume').hidden=true;}
+ if(fresh){++source;history.clear();backState=null;$('workspaceResume').hidden=true;}
  if(!doc||$('layerToggle').hidden){buttons();return;}
  const json=JSON.stringify(doc);
- if(entries[cursor]===json){buttons();return;}
- entries=entries.slice(0,cursor+1);entries.push(json);
- // Bound retained serialized history; a large current scene remains usable without history.
- let bytes=entries.reduce((n,s)=>n+s.length*2,0);
- while(entries.length>1&&(entries.length>20||bytes>48*1024*1024))bytes-=entries.shift().length*2;
- cursor=entries.length-1;buttons();
+ history.push(json);buttons();
 }
 window.addEventListener('coex:history-source',()=>capture(true));
 window.addEventListener('coex:history-change',()=>{if(!busy)capture();});
 async function travel(delta){
- if(busy||cursor+delta<0||cursor+delta>=entries.length)return;
- const ticket=source,target=cursor+delta;busy=true;buttons();
- try{if(await api().restore(JSON.parse(entries[target]))&&ticket===source){cursor=target;notice(delta<0?'이전 편집으로 되돌렸습니다.':'편집을 다시 적용했습니다.');}}
+ if(busy||(delta<0?!history.canUndo():!history.canRedo()))return;
+ const ticket=source;busy=true;buttons();
+ try{const target=history.peek(delta);if(await api().restore(JSON.parse(target.json))&&ticket===source){history.commit(target.index);notice(delta<0?'이전 편집으로 되돌렸습니다.':'편집을 다시 적용했습니다.');}}
  catch{notice('편집을 복원하지 못했습니다. 현재 작업을 확인해 주세요.');}
  finally{busy=false;buttons();}
 }

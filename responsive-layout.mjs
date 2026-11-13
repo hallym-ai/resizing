@@ -1,3 +1,6 @@
+import {inspectGridCandidate} from './grid-pattern.mjs';
+import {createGridSourceProvenance,validGridSourceProvenance} from './grid-source.mjs';
+import {encodeCompositeGrid,applyCompositeGrid} from './grid-composite.mjs';
 import {mountOutsideStatus} from './outside-status.mjs';
 import {promoteNativeUnderlay} from './native-underlay.mjs';
 import './main-raster-background.mjs';
@@ -37,7 +40,7 @@ const layoutSelections=new Map();
 let candidateContext='';
 let lastLayoutEngine='preserved-source-layout';let lastAutomaticDecision=null;
 let baseline=null,undo=null,lastRevision=-1,queued=null,composing=false,sizeTimer=null;
-const attrs=['__outsideTrialVisible','objectCaching','textureBackgroundFrame','left','top','scaleX','scaleY','angle','originX','originY','flipX','flipY','width','height','fontSize','textAlign','textBackgroundColor','readabilityPanelBox','layerRole','styles','splitByGrapheme','lineHeight','direction','radius','strokeWidth','rx','ry','visible','layoutOverlapBasis','layoutGraphSource'];
+const attrs=['nativeBitmapProvenance','gridSourceUserEdited','gridSourceProvenance','gridExpansion','__outsideTrialVisible','objectCaching','textureBackgroundFrame','left','top','scaleX','scaleY','angle','originX','originY','flipX','flipY','width','height','fontSize','textAlign','textBackgroundColor','readabilityPanelBox','layerRole','styles','splitByGrapheme','lineHeight','direction','radius','strokeWidth','rx','ry','visible','layoutOverlapBasis','layoutGraphSource'];
 const tell=(text,error=false)=>{$('reflowStatus').textContent=text;$('reflowStatus').classList.toggle('error',error);};
 const api=()=>globalThis.coexLayerLayout;
 const nativeText=o=>['text','textbox','itext'].includes(String(o.type).toLowerCase());
@@ -334,6 +337,18 @@ function exposeOutsideTrial(state){
  }
  globalThis.coexOutsideTrialApplied=applied;
 }
+// One candidate, one object, original scene owner transaction.
+function makeCompositeTrial(state,result,base,width,height,reviewed){
+ const f=result.foregroundOffset,k=result.foregroundScale;if(!f||!Number.isFinite(k)||k<=0)return null;
+ const defaultFrame={left:f.x,top:f.y,right:f.x+base.width*k,bottom:f.y+base.height*k},targetFrame={left:0,top:0,right:width,bottom:height},permittedUnderlays=(result.separation?.backgrounds||[]).map(x=>state.objects[x.id]).filter(Boolean);
+ for(const object of state.objects){if(String(object.type).toLowerCase()!=='image'||object.visible===false||object.layerRole!=='subject'||object.sourceElementType!=='picture')continue;const old=reviewed.get(object),frame=old?{left:f.x+old.left*k,top:f.y+old.top*k,right:f.x+old.right*k,bottom:f.y+old.bottom*k}:defaultFrame,b=object.getBoundingRect();if(Math.abs(b.left-frame.left)>2||Math.abs(b.left+b.width-frame.right)>2||Math.abs(b.top+b.height-frame.bottom)>2)continue;
+  const el=object.getElement?.(),w=el?.naturalWidth||el?.width,h=el?.naturalHeight||el?.height;if(!el||!Number.isInteger(w)||!Number.isInteger(h)||w*h>4000000)continue;let c;try{c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(el,0,0);const pixels={data:x.getImageData(0,0,w,h).data,width:w,height:h};
+   if(state.sourceFormat==='pptx'){const source=inspectGridCandidate({state,object,sourceFrame:frame,targetFrame,pixels,permittedUnderlays,allowNoExtension:true});const meta=createGridSourceProvenance({...state,width,height},object,frame,source);if(meta)object.set('gridSourceProvenance',meta);}
+   const plan=encodeCompositeGrid({state,object,sourceFrame:frame,targetFrame,pixels,permittedUnderlays,reviewedJson:!!old,makeCanvas:(a,b)=>{const q=document.createElement('canvas');q.width=a;q.height=b;return q;}});if(plan)return plan;
+  }catch{}finally{if(c)c.width=c.height=0;}
+ }return null;
+}
+function decodeCompositeTrial(src){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('배경 이미지 합성 결과를 읽지 못했습니다.'));im.src=src;});}
 async function resizeEditorAtomic(width,height,{preset=null}={}){
  const serial=++atomicResizeSerial;clearTimeout(sizeTimer);const state=api()?.read();
  if(!trustedEditorState(state)){tell('새 파일이나 슬라이드의 편집 요소가 준비된 뒤 규격을 선택하세요.',true);return false;}
@@ -344,17 +359,19 @@ async function resizeEditorAtomic(width,height,{preset=null}={}){
  const context=state.sceneOutputKey,previous=capture(state),base=baseFor(state),expected={epoch:state.epoch,revision:state.revision};
  const current=()=>{const s=api()?.read();return serial===atomicResizeSerial&&trustedEditorState(s)&&s.epoch===expected.epoch&&s.revision===expected.revision&&s.sceneOutputKey===context&&Number($('wInput').value)===width&&Number($('hInput').value)===height;};
  const restoreInputs=()=>{const s=api()?.read();if(serial===atomicResizeSerial&&s&&s.epoch===expected.epoch&&s.revision===expected.revision&&s.sceneOutputKey===context&&globalThis.getLayerOutputContextKey?.()===context)targetInputs(s.width,s.height);};
- let target,promise,prepared,result;targetInputs(width,height);composing=true;
- try{restore(base);result=resizeBackgroundOnly({...state,width:base.width,height:base.height},width,height);exposeOutsideTrial(state);target=capture({...state,width,height});promise=api().prepareAtomicSnapshot(width,height,{...expected,decision:result});}
- catch(error){restoreInputs();tell(error.message,true);return false;}
- finally{restore(previous);api()?.refresh();composing=false;}
- try{prepared=await promise;if(!current()){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);return false;}
-  if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);if(current()){restoreInputs();tell('요소가 변경되었거나 이동·다중선택 중이어서 규격 적용을 중지했습니다. 선택을 해제하고 다시 시도하세요.',true);}return false;}
+ let target,promise,prepared,result,plan,decoded;targetInputs(width,height);composing=true;
+ try{restore(base);const before={...state,width:base.width,height:base.height},reviewed=new Map(state.objects.filter(o=>validGridSourceProvenance(before,o)).map(o=>[o,{...o.gridSourceProvenance.frame}]));result=resizeBackgroundOnly(before,width,height);exposeOutsideTrial(state);plan=makeCompositeTrial(state,result,base,width,height,reviewed);target=capture({...state,width,height});}
+ catch(error){restoreInputs();tell(error.message,true);return false;}finally{restore(previous);api()?.refresh();composing=false;}
+ try{
+  if(plan){decoded=await decodeCompositeTrial(plan.composite);if(!current())return false;if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);return false;}}
+  composing=true;try{restore(target);if(plan){if(!applyCompositeGrid(plan,decoded))throw Error('원본이 바뀌어 무늬 연결을 중지했습니다.');api().validateCompositeProject();result.status='review';result.reason+=' '+plan.warning;result.backgroundScope+=' 연결한 무늬를 확인하세요.';target=capture({...state,width,height});}promise=api().prepareAtomicSnapshot(width,height,{...expected,decision:result});}
+  finally{restore(previous);api()?.refresh();composing=false;}
+  prepared=await promise;if(!current()){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);return false;}
+  if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);if(current()){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);}return false;}
   composing=true;restore(target);let next;
   try{next=api().commitAtomic(width,height,expected,prepared);}catch(error){if(current()){restore(previous);api()?.refresh();restoreInputs();tell(error.message,true);}globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);return false;}finally{composing=false;}
   lastAutomaticDecision=result;globalThis.coexBackgroundOnlyResult=result;undo={...previous,afterRevision:next.revision};lastRevision=next.revision;lastLayoutEngine='background-only-v1';
-  try{globalThis.coexSetPresetMetadata?.(preset);$('reflowUndo').disabled=false;tell(width+' × '+height+'px · '+result.reason+(Math.abs(result.foregroundScale-1)>1e-6?' 요소 전체 균등 조절: '+Math.round(result.foregroundScale*100)+'%.':''));outputNote.textContent=result.backgroundScope;publishSeparation();}catch{}
-  return true;
+  try{globalThis.coexSetPresetMetadata?.(preset);$('reflowUndo').disabled=false;tell(width+' × '+height+'px · '+result.reason);outputNote.textContent=result.backgroundScope;publishSeparation();}catch{}return true;
  }catch(error){if(current()){restoreInputs();tell(error.message,true);}return false;}
 }
 globalThis.coexResizeEditorPreset=async function(p){if(!p){tell('규격을 선택하세요.',true);return false;}return resizeEditorAtomic(p.w,p.h,{preset:p});};
@@ -418,7 +435,7 @@ globalThis.readCompositionSettings=function(){const settings=rasterSettings(),st
 globalThis.getAutomaticSceneDecision=(source,w,h)=>{
  const state=api()?.read();if(!sceneMatchesSource(state,globalThis.getLayerAnalysisSource?.())||!globalThis.isLayerOutputSource?.(source)||state.width!==w||state.height!==h)return null;
  if(lastAutomaticDecision&&lastAutomaticDecision.sourceEpoch===state.epoch&&lastAutomaticDecision.width===w&&lastAutomaticDecision.height===h)return lastAutomaticDecision;
- const p=partitionBackground(state),bitmap=p.backgrounds.some(x=>x.evidence==='pptx-native-bitmap-stretch-review');return{policy:'background-only-v1',sourceEpoch:state.epoch,width:w,height:h,inputKind:state.inputKind||'layered',path:'background-only',method:'current-scene',status:p.separated&&!p.unresolved.length&&!bitmap&&!p.backgrounds.some(x=>x.textureProfile)?'ready':'review',reason:bitmap?'PPTX 배경 후보에 포함된 글씨·로고와 늘어난 모양을 확인하세요.':p.separated?'원본 요소 배치를 유지한 편집 장면입니다. 확인된 배경만 크기를 바꿉니다.':'독립 배경 분리를 확인하지 못했습니다. 원본 전체를 보호하고 있습니다.',crop:'none',stretch:false};
+ const p=partitionBackground(state),bitmap=p.backgrounds.some(x=>['pptx-native-bitmap-stretch-review','json-independent-bitmap-stretch-review'].includes(x.evidence));return{policy:'background-only-v1',sourceEpoch:state.epoch,width:w,height:h,inputKind:state.inputKind||'layered',path:'background-only',method:'current-scene',status:p.separated&&!p.unresolved.length&&!bitmap&&!p.backgrounds.some(x=>x.textureProfile)?'ready':'review',reason:bitmap?'배경 후보에 포함된 글씨·로고와 늘어난 모양을 확인하세요.':p.separated?'원본 요소 배치를 유지한 편집 장면입니다. 확인된 배경만 크기를 바꿉니다.':'독립 배경 분리를 확인하지 못했습니다. 원본 전체를 보호하고 있습니다.',crop:'none',stretch:false};
 };
 globalThis.encodeTarget=async function(source,p,settings){
  const policy=globalThis.coexAutoResizePolicy,state=api()?.read(),sourceInfo=globalThis.getLayerAnalysisSource?.(),origin=policy.origin(source),alias=policy.alias(source);
@@ -441,7 +458,7 @@ function publishSeparation(){
  if(state.fontError||document.fonts.status==='loading'||separationAttempts>=2||performance.now()<separationRetryAt)return;
  separationBusy=true;separationAttempts++;separationRetryAt=performance.now()+1250;
  try{const p=separationPreviews(state,()=>api().snapshotThumbnail(512));$('backgroundOnlyPreview').src=p.background;$('foregroundOnlyPreview').src=p.foreground;
- $('backgroundSeparationStatus').textContent=(p.parts.separated?'배경과 요소를 구분':'배경 분리 미완료')+(p.parts.backgrounds.some(x=>x.textureProfile)?' · 종이·벽돌 질감 배경 추정 · 이음선 검토 필요':'')+(p.parts.backgrounds.some(x=>x.evidence==='pptx-native-bitmap-stretch-review')?' · 그림 배경 후보: 포함된 글씨·로고와 왜곡 확인':'')+' · 배경 '+p.parts.backgrounds.length+'개 · 보호 요소 '+p.parts.foreground.length+'개'+(p.parts.unresolved.length?' · 배경 후보 '+p.parts.unresolved.length+'개는 근거 부족으로 보호':'' );separationKey=key;
+ $('backgroundSeparationStatus').textContent=(p.parts.separated?'배경과 요소를 구분':'배경 분리 미완료')+(p.parts.backgrounds.some(x=>x.textureProfile)?' · 종이·벽돌 질감 배경 추정 · 이음선 검토 필요':'')+(p.parts.backgrounds.some(x=>['pptx-native-bitmap-stretch-review','json-independent-bitmap-stretch-review'].includes(x.evidence))?' · 그림 배경 후보: 포함된 글씨·로고와 왜곡 확인':'')+' · 배경 '+p.parts.backgrounds.length+'개 · 보호 요소 '+p.parts.foreground.length+'개'+(p.parts.unresolved.length?' · 배경 후보 '+p.parts.unresolved.length+'개는 근거 부족으로 보호':'' );separationKey=key;
  }catch(error){$('backgroundSeparationStatus').textContent='분리 미리보기 확인 필요: '+error.message+(separationAttempts>=2?' · 반복 처리를 멈췄습니다. 새 파일이나 규격 변경 후 다시 확인합니다.':'');}finally{separationBusy=false;}
 }
 const timer=setInterval(()=>{
