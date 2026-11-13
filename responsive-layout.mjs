@@ -418,7 +418,7 @@ globalThis.readCompositionSettings=function(){const settings=rasterSettings(),st
 globalThis.getAutomaticSceneDecision=(source,w,h)=>{
  const state=api()?.read();if(!sceneMatchesSource(state,globalThis.getLayerAnalysisSource?.())||!globalThis.isLayerOutputSource?.(source)||state.width!==w||state.height!==h)return null;
  if(lastAutomaticDecision&&lastAutomaticDecision.sourceEpoch===state.epoch&&lastAutomaticDecision.width===w&&lastAutomaticDecision.height===h)return lastAutomaticDecision;
- const p=partitionBackground(state);return{policy:'background-only-v1',sourceEpoch:state.epoch,width:w,height:h,inputKind:state.inputKind||'layered',path:'background-only',method:'current-scene',status:p.separated&&!p.unresolved.length&&!p.backgrounds.some(x=>x.textureProfile)?'ready':'review',reason:p.separated?'원본 요소 배치를 유지한 편집 장면입니다. 확인된 배경만 크기를 바꿉니다.':'독립 배경 분리를 확인하지 못했습니다. 원본 전체를 보호하고 있습니다.',crop:'none',stretch:false};
+ const p=partitionBackground(state),bitmap=p.backgrounds.some(x=>x.evidence==='pptx-native-bitmap-stretch-review');return{policy:'background-only-v1',sourceEpoch:state.epoch,width:w,height:h,inputKind:state.inputKind||'layered',path:'background-only',method:'current-scene',status:p.separated&&!p.unresolved.length&&!bitmap&&!p.backgrounds.some(x=>x.textureProfile)?'ready':'review',reason:bitmap?'PPTX 배경 후보에 포함된 글씨·로고와 늘어난 모양을 확인하세요.':p.separated?'원본 요소 배치를 유지한 편집 장면입니다. 확인된 배경만 크기를 바꿉니다.':'독립 배경 분리를 확인하지 못했습니다. 원본 전체를 보호하고 있습니다.',crop:'none',stretch:false};
 };
 globalThis.encodeTarget=async function(source,p,settings){
  const policy=globalThis.coexAutoResizePolicy,state=api()?.read(),sourceInfo=globalThis.getLayerAnalysisSource?.(),origin=policy.origin(source),alias=policy.alias(source);
@@ -441,7 +441,7 @@ function publishSeparation(){
  if(state.fontError||document.fonts.status==='loading'||separationAttempts>=2||performance.now()<separationRetryAt)return;
  separationBusy=true;separationAttempts++;separationRetryAt=performance.now()+1250;
  try{const p=separationPreviews(state,()=>api().snapshotThumbnail(512));$('backgroundOnlyPreview').src=p.background;$('foregroundOnlyPreview').src=p.foreground;
- $('backgroundSeparationStatus').textContent=(p.parts.separated?'배경과 요소를 구분':'배경 분리 미완료')+(p.parts.backgrounds.some(x=>x.textureProfile)?' · 종이·벽돌 질감 배경 추정 · 이음선 검토 필요':'')+' · 배경 '+p.parts.backgrounds.length+'개 · 보호 요소 '+p.parts.foreground.length+'개'+(p.parts.unresolved.length?' · 배경 후보 '+p.parts.unresolved.length+'개는 근거 부족으로 보호':'' );separationKey=key;
+ $('backgroundSeparationStatus').textContent=(p.parts.separated?'배경과 요소를 구분':'배경 분리 미완료')+(p.parts.backgrounds.some(x=>x.textureProfile)?' · 종이·벽돌 질감 배경 추정 · 이음선 검토 필요':'')+(p.parts.backgrounds.some(x=>x.evidence==='pptx-native-bitmap-stretch-review')?' · 그림 배경 후보: 포함된 글씨·로고와 왜곡 확인':'')+' · 배경 '+p.parts.backgrounds.length+'개 · 보호 요소 '+p.parts.foreground.length+'개'+(p.parts.unresolved.length?' · 배경 후보 '+p.parts.unresolved.length+'개는 근거 부족으로 보호':'' );separationKey=key;
  }catch(error){$('backgroundSeparationStatus').textContent='분리 미리보기 확인 필요: '+error.message+(separationAttempts>=2?' · 반복 처리를 멈췄습니다. 새 파일이나 규격 변경 후 다시 확인합니다.':'');}finally{separationBusy=false;}
 }
 const timer=setInterval(()=>{
