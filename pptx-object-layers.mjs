@@ -6,6 +6,7 @@ import {mergeOutsideCandidate} from './outside-merge-runtime.mjs';
 import {derivePictureEvidence} from './ooxml-picture-provenance.mjs';
 import {matchRendererGeometry} from './renderer-geometry-gate.mjs';
 import {originalPptxPicture} from './pptx-original-picture.mjs';
+import {explicitSlideSolid,captureMatchesSlideSolid} from './pptx-slide-solid.mjs';
 /* Separate PPTX drawing objects before any raster OCR or colour segmentation. */
 const stale=signal=>{if(signal.aborted)throw new DOMException('Cancelled','AbortError');};
 function image(src,w,h,x,y,name,role='other',text='',locked=false){return{type:'Image',version:'7.4.0',originX:'left',originY:'top',left:x,top:y,width:w,height:h,scaleX:1,scaleY:1,angle:0,opacity:1,visible:true,src,layerName:name,layerRole:role,layerLocked:locked,sourceText:text,crossOrigin:null,filters:[]};}
@@ -43,6 +44,7 @@ export async function extractPptxObjects(root,original,{width,height,pixelRatio,
   else nodes.push({el,info});
  }
  const W=original.width,H=original.height,objects=[],warnings=[];let pixels=W*H,empty=0,directPictureCount=0;
+ const slideSolid=explicitSlideSolid(provenance?.slideXml);
  // Allocate a bounded working texture budget, rather than rejecting a whole slide.
  // Geometry and OOXML text stay at original slide coordinates.
  const budget=Math.max(1000000,56000000-2*W*H),count=Math.max(1,nodes.length);
@@ -53,7 +55,14 @@ export async function extractPptxObjects(root,original,{width,height,pixelRatio,
  const capture=filter=>globalThis.htmlToImage.toCanvas(root,{width,height,pixelRatio:captureRatio,skipFonts:true,cacheBust:false,filter,style:{transform:'none',margin:'0',backgroundColor:'transparent',backgroundImage:'none'}});
  // Keep the actual slide fill separately; do not infer a colour or erase text.
  const background=await globalThis.htmlToImage.toCanvas(root,{width,height,pixelRatio,skipFonts:true,cacheBust:false,filter:node=>!node.dataset?.coexPptxNode,style:{transform:'none',margin:'0'}});stale(signal);
- objects.push(image(background.toDataURL('image/png'),W,H,0,0,'PPTX 슬라이드 배경','background','',true));background.width=background.height=0;
+ // Only exchange the capture for a vector rectangle after every RGBA pixel
+ // has matched the explicitly specified opaque slide colour. This keeps the
+ // exact same one-layer paint order and preserves any master artwork in the
+ // normal capture fallback.
+ const slideSolidExact=!!slideSolid&&captureMatchesSlideSolid(background,slideSolid);
+ if(slideSolidExact)objects.push({type:'Rect',version:'7.4.0',originX:'left',originY:'top',left:0,top:0,width:W,height:H,scaleX:1,scaleY:1,fill:slideSolid,stroke:null,strokeWidth:0,opacity:1,visible:true,layerName:'PPTX 슬라이드 배경','layerRole':'background',layerLocked:true,sourceText:''});
+ else objects.push(image(background.toDataURL('image/png'),W,H,0,0,'PPTX 슬라이드 배경','background','',true));
+ background.width=background.height=0;
  for(let i=0;i<nodes.length;i++){
   stale(signal);const {el,info,excludeText}=nodes[i],ancestors=new Set();let p=el;while(p&&p!==root){ancestors.add(p);p=p.parentElement;}
   // Retain each ancestor transform, but never a sibling's text or picture.
@@ -127,5 +136,5 @@ export async function extractPptxObjects(root,original,{width,height,pixelRatio,
  const ref=image(original.toDataURL('image/png'),W,H,0,0,'PPTX 원본 비교용 · 숨김','background','',true);ref.visible=false;objects.unshift(ref);
  const recoveryRecords=outsideProbe.records.slice(0,200).map((r,i)=>({id:String(r.id||`unknown:${i}`).slice(0,120),name:String(r.name||'요소').slice(0,170),candidate:!!r.stored,reason:r.stored?'':r.mergeReason==='off-slide-only-not-retained'?'off-slide':r.reason==='candidate-limit-review'?'limit':r.mergeReason==='ambiguous-edge-strip'?'ambiguous':r.reason?'unsupported':'other'}));
  const outsideRecoveryReport=recoveryRecords.length?{version:1,records:recoveryRecords,omitted:Math.max(0,outsideProbe.records.length-200)}:null;
- return{format:'coex-layer-project',version:objects.some(o=>o.outsideRecovery)||outsideRecoveryReport?2:1,...(outsideRecoveryReport?{outsideRecoveryReport}:{}),width:W,height:H,analysis:{engine:'pptx-original-objects',mediaCoverage,directPictureCount,workingPixelRatio:captureRatio,sourcePixelRatio:pixelRatio,objectCount:objects.length-2,textCount,pictureCount,editableTextCount,vectorCount,warnings},scene:{version:'7.4.0',objects}};
+ return{format:'coex-layer-project',version:objects.some(o=>o.outsideRecovery)||outsideRecoveryReport?2:1,...(outsideRecoveryReport?{outsideRecoveryReport}:{}),width:W,height:H,analysis:{engine:'pptx-original-objects',mediaCoverage,directPictureCount,slideSolid:slideSolidExact,workingPixelRatio:captureRatio,sourcePixelRatio:pixelRatio,objectCount:objects.length-2,textCount,pictureCount,editableTextCount,vectorCount,warnings},scene:{version:'7.4.0',objects}};
 }

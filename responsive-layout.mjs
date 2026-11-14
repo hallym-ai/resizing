@@ -2,6 +2,7 @@ import {inspectGridCandidate} from './grid-pattern.mjs';
 import {createGridSourceProvenance,createRecoveredGridSourceProvenance,validGridSourceProvenance} from './grid-source.mjs';
 import {encodeCompositeGrid,applyCompositeGrid,verifyExpandedGrid} from './grid-composite.mjs';
 import {mountOutsideStatus} from './outside-status.mjs';
+import {registerTrustedOutsideReference,hasTrustedOutsideReference} from './final-outside-overlay.mjs';
 import {promoteNativeUnderlay} from './native-underlay.mjs';
 import './main-raster-background.mjs';
 import {partitionBackground,resizeBackgroundOnly,separationPreviews,trackNativeBackgroundFit} from './background-only.mjs';
@@ -34,6 +35,10 @@ $('reflowApply').style.display='none';
 $('reflowCustomApply').closest('details').style.display='none';
 
 const outputNote=document.createElement('p');outputNote.id='reflowOutputNote';outputNote.className='reflow-output-note';outputNote.setAttribute('role','status');$('snsActiveInfo').after(outputNote);
+// This notice is separate from transient resize messages, so a saved JSON or
+// undo scene cannot silently lose outside patches when its source-frame trust
+// cannot be re-established.
+const outsideReferenceNotice=document.createElement('p');outsideReferenceNotice.id='outsideReferenceNotice';outsideReferenceNotice.className='layer-help';outsideReferenceNotice.setAttribute('role','status');outsideReferenceNotice.setAttribute('aria-live','polite');outsideReferenceNotice.hidden=true;$('reflowStatus').after(outsideReferenceNotice);
 const semanticMemory=new WeakMap();
 window.addEventListener('coex:semantic-reset',e=>{for(const o of e.detail||[])semanticMemory.delete(o);for(const o of api()?.read()?.objects||[]){if(o.layoutOverlapBasis)o.set('layoutOverlapBasis',undefined);if(o.layoutGraphSource)o.set('layoutGraphSource',undefined);}baseline=null;});
 const layoutSelections=new Map();
@@ -43,6 +48,14 @@ let baseline=null,undo=null,lastRevision=-1,queued=null,composing=false,sizeTime
 const attrs=['partialSolidProvenance','nativeBitmapProvenance','gridSourceUserEdited','gridSourceProvenance','gridExpansion','__outsideTrialVisible','objectCaching','textureBackgroundFrame','left','top','scaleX','scaleY','angle','originX','originY','flipX','flipY','width','height','fontSize','textAlign','textBackgroundColor','readabilityPanelBox','layerRole','styles','splitByGrapheme','lineHeight','direction','radius','strokeWidth','rx','ry','visible','layoutOverlapBasis','layoutGraphSource'];
 const tell=(text,error=false)=>{$('reflowStatus').textContent=text;$('reflowStatus').classList.toggle('error',error);};
 const api=()=>globalThis.coexLayerLayout;
+function updateOutsideReferenceNotice(state){
+ const candidates=state?.objects.filter(o=>o.visible!==false&&o.__outsideTrialVisible&&o.trialOutsideRestore)||[];
+ const legacy=candidates.some(o=>o.__outsideLegacy===true);
+ const held=candidates.some(o=>!hasTrustedOutsideReference(o.canvas)&&o.__outsideLegacy!==true);
+ outsideReferenceNotice.hidden=!legacy&&!held;
+ if(legacy)outsideReferenceNotice.textContent='원본 기준 영역을 확인하지 못해 기존 방식으로 바깥 연결을 시도합니다. 요소를 움직이면 원본 안쪽 보존이 보장되지 않으니 결과를 확인해 주세요.'+(held?' 일부 요소의 연결은 보류되었습니다.':'');
+ else if(held)outsideReferenceNotice.textContent='원본 슬라이드의 기준 영역을 확인하지 못해 별·선 등 바깥 연결을 보류했습니다. 기존 요소는 유지됩니다. 저장 파일을 다시 열었거나 실행 취소한 경우 PPTX 원본을 다시 열고 결과를 확인해 주세요.';
+}
 const nativeText=o=>['text','textbox','itext'].includes(String(o.type).toLowerCase());
 function capture(state){return{epoch:state.epoch,revision:state.revision,width:state.width,height:state.height,objects:state.objects.map(o=>({object:o,imageElement:o.getElement?.(),values:Object.fromEntries(attrs.map(k=>[k,k==='styles'?structuredClone(o[k]):o[k]]))}))};}
 function matching(saved,state){return saved&&saved.epoch===state.epoch&&saved.objects.length===state.objects.length&&saved.objects.every(x=>state.objects.includes(x.object));}
@@ -280,6 +293,7 @@ function preserveObjects(state,width,height,{allowUpscale=false}={}){
 // preview is published. Some original textbox bounds exceed the slide frame.
 globalThis.prepareInitialNativeFrame=()=>{
  const state=api()?.read();if(!state)return;
+ registerTrustedOutsideReference(state,globalThis.getLayerAnalysisSource?.());
  globalThis.coexNativeUnderlays=promoteNativeUnderlay(state);
  trackNativeBackgroundFit(state,()=>preserveObjects(state,state.width,state.height));api().refresh();
  queueMicrotask(()=>window.dispatchEvent(new Event('coex:history-source')));
@@ -291,7 +305,7 @@ function resizePreservingLayout(width,height,{preset=null,reason=''}={}){
  const previous=capture(state),base=baseFor(state),keepLock=$('lockBtn').getAttribute('aria-checked')==='true';
  composing=true;
  try{
-  restore(base);const result=resizeBackgroundOnly({...state,width:base.width,height:base.height},width,height);
+  restore(base);const result=resizeBackgroundOnly({...state,width:base.width,height:base.height},width,height);exposeOutsideTrial(state);
   lastAutomaticDecision=result;globalThis.coexBackgroundOnlyResult=result;
   const next=api().commit(width,height,{epoch:state.epoch,revision:state.revision,apply:true});
   globalThis.setLock?.(keepLock);undo={...previous,afterRevision:next.revision};lastRevision=next.revision;lastLayoutEngine='background-only-v1';$('reflowUndo').disabled=false;
@@ -308,31 +322,52 @@ let atomicResizeSerial=0;
 globalThis.coexCancelEditorResize=()=>{atomicResizeSerial++;clearTimeout(sizeTimer);};
 function trustedEditorState(state){const source=globalThis.getLayerAnalysisSource?.(),context=globalThis.getLayerOutputContextKey?.();return !!state&&!!context&&state.sceneOutputKey===context&&(state.sceneManual||(source?!!state.sourceKey&&state.sourceKey===source.key:state.linked));}
 // Scratch review experiment only: source-crop provenance is not yet verified.
-async function preloadOutsideTrial(state){
- await Promise.all(state.objects.filter(o=>o.trialOutsideRestore?.outer?.src&&!o.__outsideTrialImage).map(o=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>{o.__outsideTrialImage=im;resolve()};im.onerror=()=>reject(Error('outside trial image load failed'));im.src=o.trialOutsideRestore.outer.src;})));
+async function preloadOutsideTrial(state,isCurrent=()=>true){
+ // Prepare without mutating shared Fabric objects across the asynchronous load.
+ const records=state.objects.filter(o=>o.trialOutsideRestore?.outer?.src).map(o=>{
+  const m=o.trialOutsideRestore,b=m.original,p=m.outer,s=m.slide;
+  return {o,m,b,p,s,base:o.getElement?.(),src:o.getSrc?.(),fields:[m.baseSourceDigest,b.left,b.top,b.width,b.height,b.scaleX,b.scaleY,b.cropX,b.cropY,p.src,p.left,p.top,p.width,p.height,s.width,s.height]};
+ });
+ const same=r=>{const {o,m,b,p,s,fields}=r;return o.trialOutsideRestore===m&&m.original===b&&m.outer===p&&m.slide===s&&o.getElement?.()===r.base&&o.getSrc?.()===r.src&&fields.every((v,i)=>Object.is(v,[m.baseSourceDigest,b.left,b.top,b.width,b.height,b.scaleX,b.scaleY,b.cropX,b.cropY,p.src,p.left,p.top,p.width,p.height,s.width,s.height][i]));};
+ const loaded=await Promise.all(records.map(r=>{
+  const existing=r.o.__outsideTrialImage;
+  if(existing)return existing.src===r.p.src?existing:null;
+  return new Promise(resolve=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src=r.p.src;});
+ }));
+ if(!isCurrent()||!records.every(same))throw Error('편집 내용이 바뀌어 바깥 요소 연결을 중단했습니다.');
+ for(let i=0;i<records.length;i++){
+  const o=records[i].o;
+  if(!loaded[i]){o.__outsideReview=true;continue;}
+  if(!o.__outsideTrialImage)o.__outsideTrialImage=loaded[i];
+ }
  for(const o of state.objects.filter(o=>o.__outsideTrialImage&&!o.__outsideRenderInstalled)){
   o.__outsideBaseElement=o.getElement?.();o.__outsideBaseSource=o.getSrc?.();
-  const render=o._render;o._render=function(ctx){if(!this.__outsideTrialVisible){render.call(this,ctx);return;}const m=this.trialOutsideRestore,b=m.original,p=m.outer;
-   const sourceChanged=!this.__outsideBaseElement||this.getElement?.()!==this.__outsideBaseElement||this.getSrc?.()!==this.__outsideBaseSource||this.width!==b.width||this.height!==b.height||(this.cropX??0)!==b.cropX||(this.cropY??0)!==b.cropY;
+  // Trusted PPTX scenes use the final composite overlay. For pre-existing
+  // JSON/history scenes without an anchor, retain the previously published
+  // per-object renderer, while exposing its weaker frame guarantee.
+  const render=o._render;o._render=function(ctx){
+   const report=(review,legacy)=>{if(!!this.__outsideReview!==review||!!this.__outsideLegacy!==legacy){this.__outsideReview=review;this.__outsideLegacy=legacy;queueMicrotask(()=>window.dispatchEvent(new Event('coex:outside-recovery-change')));}};
+   if(!this.__outsideTrialVisible||globalThis.coexDisableOutsideTrial){report(false,false);render.call(this,ctx);return;}
+   if(hasTrustedOutsideReference(this.canvas)){if(this.__outsideLegacy)report(false,false);render.call(this,ctx);return;}
+   const m=this.trialOutsideRestore,b=m?.original,p=m?.outer,im=this.__outsideTrialImage;
+   const sourceChanged=!b||!p||!im||!this.__outsideBaseElement||this.getElement?.()!==this.__outsideBaseElement||this.getSrc?.()!==this.__outsideBaseSource||this.width!==b.width||this.height!==b.height||(this.cropX??0)!==b.cropX||(this.cropY??0)!==b.cropY||(im.currentSrc||im.src)!==p.src;
    const unsupported=this.group||this.clipPath||this.shadow||this.filters?.length||(this.globalCompositeOperation&&this.globalCompositeOperation!=='source-over')||this.originX!=='left'||this.originY!=='top';
-   if(sourceChanged||unsupported){if(!this.__outsideReview){this.__outsideReview=true;tell('복원된 요소의 원본이나 자르기·효과가 변경되어 바깥 연결을 중지했습니다. 요소를 확인해 주세요.',true);}render.call(this,ctx);return;}
-   this.__outsideReview=false;
+   if(sourceChanged||unsupported||!b.scaleX||!b.scaleY){report(true,false);render.call(this,ctx);return;}
    const x=(p.left-b.left)/b.scaleX-this.width/2,y=(p.top-b.top)/b.scaleY-this.height/2;
-   const slideX=-b.left/b.scaleX-this.width/2,slideY=-b.top/b.scaleY-this.height/2;
-   const tr=ctx.getTransform();
-   if(Math.abs(tr.b)<1e-8&&Math.abs(tr.c)<1e-8&&tr.a>0&&tr.d>0&&ctx.canvas.width*ctx.canvas.height<=24000000){
-    const left=Math.ceil(tr.e+tr.a*slideX-.5),top=Math.ceil(tr.f+tr.d*slideY-.5),right=Math.ceil(tr.e+tr.a*(slideX+m.slide.width/b.scaleX)-.5),bottom=Math.ceil(tr.f+tr.d*(slideY+m.slide.height/b.scaleY)-.5);
-    ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.beginPath();ctx.rect(-100000,-100000,200000,200000);ctx.rect(left,top,right-left,bottom-top);ctx.clip('evenodd');ctx.setTransform(tr);ctx.drawImage(this.__outsideTrialImage,x,y,p.width,p.height);ctx.restore();
-   }else if(!this.__outsideReview){this.__outsideReview=true;tell('회전·반전 또는 큰 화면에서 바깥 연결을 표시할 수 없어 원본 요소를 유지했습니다. 결과를 확인해 주세요.',true);}
-   render.call(this,ctx);
+   const slideX=-b.left/b.scaleX-this.width/2,slideY=-b.top/b.scaleY-this.height/2,tr=ctx.getTransform();
+   if(Math.abs(tr.b)>=1e-8||Math.abs(tr.c)>=1e-8||tr.a<=0||tr.d<=0||ctx.canvas.width*ctx.canvas.height>24000000){report(true,false);render.call(this,ctx);return;}
+   const left=Math.ceil(tr.e+tr.a*slideX-.5),top=Math.ceil(tr.f+tr.d*slideY-.5),right=Math.ceil(tr.e+tr.a*(slideX+m.slide.width/b.scaleX)-.5),bottom=Math.ceil(tr.f+tr.d*(slideY+m.slide.height/b.scaleY)-.5);
+   let ok=false;ctx.save();try{ctx.setTransform(1,0,0,1,0,0);ctx.beginPath();ctx.rect(-100000,-100000,200000,200000);ctx.rect(left,top,right-left,bottom-top);ctx.clip('evenodd');ctx.setTransform(tr);ctx.drawImage(im,x,y,p.width,p.height);ok=true;}catch{}finally{ctx.restore();}
+   report(!ok,ok);render.call(this,ctx);
   };o.__outsideRenderInstalled=true;
  }
+ return ()=>records.every(same);
 }
 globalThis.coexInstallOutsideTrialForObjects=preloadOutsideTrial;
 function exposeOutsideTrial(state){
  let applied=0;
  if(globalThis.coexDisableOutsideTrial){globalThis.coexOutsideTrialApplied=0;return;}
- for(const o of state.objects){const m=o.trialOutsideRestore,b=m?.original;if(!b||!o.__outsideTrialImage||o.angle||o.flipX||o.flipY||o.originX!=='left'||o.originY!=='top'||o.width!==b.width||o.height!==b.height||!b.scaleX||!b.scaleY)continue;
+ for(const o of state.objects){const m=o.trialOutsideRestore,b=m?.original;if(!b)continue;if(!o.__outsideTrialImage||o.angle||o.flipX||o.flipY||o.originX!=='left'||o.originY!=='top'||o.width!==b.width||o.height!==b.height||!b.scaleX||!b.scaleY){o.__outsideReview=true;continue;}
   o.set({__outsideTrialVisible:true,objectCaching:false});o.dirty=true;o.setCoords();applied++;
  }
  globalThis.coexOutsideTrialApplied=applied;
@@ -353,9 +388,10 @@ async function resizeEditorAtomic(width,height,{preset=null}={}){
  const serial=++atomicResizeSerial;clearTimeout(sizeTimer);const state=api()?.read();
  if(!trustedEditorState(state)){tell('새 파일이나 슬라이드의 편집 요소가 준비된 뒤 규격을 선택하세요.',true);return false;}
  if(!validLayoutSize(width,height)){tell('규격의 너비와 높이를 확인하세요.',true);return false;}
- try{await preloadOutsideTrial(state);}catch(error){tell(error.message,true);return false;}
- if(serial!==atomicResizeSerial||api()?.read()?.revision!==state.revision||api()?.read()?.epoch!==state.epoch)return false;
  const liveGuard=api()?.captureAtomicLiveGuard?.();if(!liveGuard){tell('다중선택을 해제하고 요소 이동이나 편집을 마친 뒤 다시 시도하세요.',true);return false;}
+ const loadingCurrent=()=>{const live=api()?.read();return serial===atomicResizeSerial&&trustedEditorState(live)&&live.epoch===state.epoch&&live.revision===state.revision&&live.sceneOutputKey===state.sceneOutputKey&&!!api()?.matchesAtomicLiveGuard?.(liveGuard);};
+ try{await preloadOutsideTrial(state,loadingCurrent);}catch(error){tell(error.message,true);return false;}
+ if(!loadingCurrent())return false;
  const context=state.sceneOutputKey,previous=capture(state),base=baseFor(state),expected={epoch:state.epoch,revision:state.revision};
  const current=()=>{const s=api()?.read();return serial===atomicResizeSerial&&trustedEditorState(s)&&s.epoch===expected.epoch&&s.revision===expected.revision&&s.sceneOutputKey===context&&Number($('wInput').value)===width&&Number($('hInput').value)===height;};
  const restoreInputs=()=>{const s=api()?.read();if(serial===atomicResizeSerial&&s&&s.epoch===expected.epoch&&s.revision===expected.revision&&s.sceneOutputKey===context&&globalThis.getLayerOutputContextKey?.()===context)targetInputs(s.width,s.height);};
@@ -421,7 +457,14 @@ globalThis.applyPreset=function(p){
 // After a scene is active, freely edited output dimensions also trigger layout.
 const rasterSchedule=globalThis.scheduleRender;
 globalThis.scheduleRender=function(...args){
- const state=api()?.read(),w=Number($('wInput').value),h=Number($('hInput').value);
+ const state=api()?.read(),w=Number($('wInput').value),h=Number($('hInput').value),source=globalThis.getLayerAnalysisSource?.();
+ // A rendered slide is not an editable PPTX scene. Do not publish a white
+ // raster preview while its native objects are still being connected.
+ if(!composing&&source?.sourceFormat==='pptx'&&source.nativeProject&&!trustedEditorState(state)&&$('autoLayerPanel')?.dataset.completedKey!==source.key){
+  globalThis.invalidate?.();globalThis.clearResult?.();
+  outputNote.textContent='PPTX 원본 글씨와 그림을 연결하고 있습니다. 연결이 완료되면 선택한 규격을 적용합니다.';if($('automaticPolicyStatus'))$('automaticPolicyStatus').textContent=outputNote.textContent;
+  return;
+ }
  if(!composing&&trustedEditorState(state)&&validLayoutSize(w,h)&&(w!==state.width||h!==state.height)){
   clearTimeout(sizeTimer);const epoch=state.epoch,revision=state.revision,serial=atomicResizeSerial;
   sizeTimer=setTimeout(()=>{const next=api()?.read();if(serial===atomicResizeSerial&&trustedEditorState(next)&&next.epoch===epoch&&next.revision===revision&&Number($('wInput').value)===w&&Number($('hInput').value)===h)void resizeEditorAtomic(w,h);},180);return;
@@ -447,10 +490,22 @@ globalThis.encodeTarget=async function(source,p,settings){
  const policy=globalThis.coexAutoResizePolicy,state=api()?.read(),sourceInfo=globalThis.getLayerAnalysisSource?.(),origin=policy.origin(source),alias=policy.alias(source);
  if(!sceneMatchesSource(state,sourceInfo)||!globalThis.isLayerOutputSource?.(origin))return originalEncode(source,p,{...settings,mode:'auto'});
  if(alias&&(alias.epoch!==state.epoch||alias.revision!==state.revision))throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
+ const guard=api()?.captureAtomicLiveGuard?.();
+ if(!guard)throw Error('요소 이동이나 편집을 마친 뒤 일괄 변환해 주세요.');
+ const current=()=>{const live=api()?.read(),info=globalThis.getLayerAnalysisSource?.();return !!live&&live.epoch===state.epoch&&live.revision===state.revision&&live.sceneOutputKey===state.sceneOutputKey&&sceneMatchesSource(live,info)&&!!globalThis.isLayerOutputSource?.(origin)&&!!api()?.matchesAtomicLiveGuard?.(guard);};
+ const outsideCurrent=await preloadOutsideTrial(state,current);
+ if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
  const original=capture(state),base=baseFor(state),diagnostics={plan:globalThis.coexLastLayoutPlan,candidates:globalThis.coexLayoutCandidates,failure:globalThis.coexLayoutFailure};let image,decision;
- try{restore(base);const sourceState={...state,width:base.width,height:base.height};decision=resizeBackgroundOnly(sourceState,p.w,p.h);image=api().snapshot(p.w,p.h);policy.record(image,decision);}
- finally{restore(original);api().refresh();globalThis.coexLastLayoutPlan=diagnostics.plan;globalThis.coexLayoutCandidates=diagnostics.candidates;globalThis.coexLayoutFailure=diagnostics.failure;}
- try{const blob=await originalEncode(image,p,{...settings,mode:'auto'});policy.record(blob,decision);return blob;}finally{if(image)image.width=image.height=0;}
+ try{
+  // No await while the live scene temporarily has target geometry.
+  const wasComposing=composing;composing=true;
+  try{restore(base);const sourceState={...state,width:base.width,height:base.height};decision=resizeBackgroundOnly(sourceState,p.w,p.h);exposeOutsideTrial(state);image=api().snapshot(p.w,p.h);policy.record(image,decision);}
+  finally{try{restore(original);api().refresh();globalThis.coexLastLayoutPlan=diagnostics.plan;globalThis.coexLayoutCandidates=diagnostics.candidates;globalThis.coexLayoutFailure=diagnostics.failure;}finally{composing=wasComposing;}}
+  if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
+  const blob=await originalEncode(image,p,{...settings,mode:'auto'});
+  if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
+  policy.record(blob,decision);return blob;
+ }finally{if(image)image.width=image.height=0;}
 };
 $('layerPreset').onchange=()=>{if(!$('layerPreset').value)return;const [w,h]=$('layerPreset').value.split('x').map(Number);$('reflowRatio').value='';void resizeEditorAtomic(w,h);};
 let separationKey='',separationAttemptKey='',separationAttempts=0,separationRetryAt=0,separationBusy=false,separationPendingKey='',separationQuietAt=0;
@@ -470,6 +525,7 @@ function publishSeparation(){
 const timer=setInterval(()=>{
  if(document.hidden)return;
  publishSeparation();const state=api()?.read();$('reflowApply').disabled=!state;$('reflowUndo').disabled=!state||!matching(undo,state)||state.revision!==undo?.afterRevision;
+ updateOutsideReferenceNotice(state);
  if(!state||candidateContext!==`${state.epoch}:${state.width}x${state.height}`)$('reflowNext').disabled=true;
  if(queued){const source=globalThis.getLayerAnalysisSource?.();if(!source||source.key!==queued.key||source.source!==queued.source){queued=null;outputNote.textContent='';}
   else if(state?.sourceKey===queued.key&&sceneMatchesSource(state,source)){const p=queued.preset;queued=null;void resizeEditorAtomic(p.w,p.h,{preset:p});}
@@ -478,10 +534,20 @@ const timer=setInterval(()=>{
 // A manual size replaces a preset queued while OCR or native import is pending.
 for(const id of ['wInput','hInput'])$(id).addEventListener('input',()=>{queued=null;atomicResizeSerial++;clearTimeout(sizeTimer);},{capture:true});
 window.addEventListener('coex:layer-source',()=>{queued=null;atomicResizeSerial++;clearTimeout(sizeTimer);});
-window.addEventListener('coex:layer-edit',()=>{queued=null;clearTimeout(sizeTimer);});
+window.addEventListener('coex:layer-edit',()=>{
+ const source=globalThis.getLayerAnalysisSource?.(),state=api()?.read();
+ const oldSceneWasEdited=!!source&&source.sourceFormat==='pptx'&&!!source.nativeProject&&state&&state.sourceKey!==source.key&&$('autoLayerPanel')?.dataset.completedKey!==source.key;
+ queued=null;clearTimeout(sizeTimer);
+ if(oldSceneWasEdited){
+  // Keep the user's edited scene and never show its raster result as the new
+  // PPTX. Re-opening the source is required after the pending import cancels.
+  globalThis.invalidate?.();globalThis.clearResult?.();
+  outputNote.textContent='이전 편집 내용이 변경되어 새 PPTX 연결을 중단했습니다. 현재 내용을 저장한 뒤 PPTX를 다시 열어 주세요.';if($('automaticPolicyStatus'))$('automaticPolicyStatus').textContent=outputNote.textContent;
+ }
+});
 window.addEventListener('pagehide',e=>{if(!e.persisted)clearInterval(timer);});
 
-window.addEventListener('coex:layer-unavailable',e=>{if(queued?.key===e.detail?.key)queued=null;outputNote.textContent=e.detail?.reason||'원본 리사이징을 사용하세요.';});
+window.addEventListener('coex:layer-unavailable',e=>{if(queued?.key===e.detail?.key)queued=null;outputNote.textContent=e.detail?.reason||'원본 리사이징을 사용하세요.';const source=globalThis.getLayerAnalysisSource?.();if(source?.sourceFormat==='pptx'&&source.key===e.detail?.key&&$('automaticPolicyStatus'))$('automaticPolicyStatus').textContent=outputNote.textContent;});
 
 
 // A preset can be picked while the self-hosted Yoga module is still loading.

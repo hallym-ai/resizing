@@ -86,7 +86,7 @@ function photoRequired(message,textMixed){const error=Error(message);error.photo
 async function analyze(source){
  const token=job;busy=true;clearTimeout(idleTimer);panel.setAttribute('aria-busy','true');$('autoBusy').hidden=false;$('autoBusy').value=0;status('글자와 그림을 자동으로 인식하는 중…');
  const started=performance.now();let image=null;
- const timeout=setTimeout(()=>{if(current(token,source)){cancelJob();status('인식 시간이 초과되었습니다. 원본 이미지 리사이징은 계속 사용할 수 있습니다.',true);}},120000);
+ const timeout=setTimeout(()=>{if(current(token,source)){cancelJob();if(source.sourceFormat==='pptx'){const reason='PPTX 원본 요소 연결 시간이 초과되었습니다. 파일을 다시 열어 주세요.';status(reason,true);window.dispatchEvent(new CustomEvent('coex:layer-unavailable',{detail:{key:source.key,reason}}));}else status('인식 시간이 초과되었습니다. 원본 이미지 리사이징은 계속 사용할 수 있습니다.',true);}},120000);
  try{
   if(source.nativeError)throw Error(source.nativeError+' 원본 리사이징은 사용할 수 있습니다. PPTX를 이미지 OCR로 임의 분리하지 않았습니다.');
   // A PPTX must never fall through to raster estimation if its original-object project is unavailable.
