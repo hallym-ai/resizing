@@ -107,9 +107,9 @@ export function partitionBackground(state){
 // pixel due to integer bitmap dimensions. Use the visible canvas boundary for
 // fit calculation only; never alter/delete pixels or trust JSON as provenance.
 export function gridVisibleFitBox(o,b,state){
- const m=o?.gridExpansion,g=m?.original,el=o?.getElement?.(),s=o?.scaleX;
- if(!g||String(o.type).toLowerCase()!=='image'||o.layerRole!=='subject'||o.angle||o.skewX||o.skewY||o.flipX||o.flipY||o.clipPath||o.cropX||o.cropY||o.originX!=='left'||o.originY!=='top'||!Number.isFinite(s)||s<=0||![g.left,g.top,g.width,g.height,g.scaleX,g.scaleY,m.left,o.width,o.height,o.left,o.top,o.scaleY,state.width,state.height].every(Number.isFinite)||!Number.isInteger(m.left)||m.left<0||g.width<1||g.height<1||m.left+g.width>o.width||o.height!==g.height||Math.abs(s-g.scaleX)>.000001||Math.abs(o.scaleY-g.scaleY)>.000001||Math.abs(o.left-(g.left-m.left*s))>.001||Math.abs(o.top-g.top)>.001||el?.naturalWidth!==o.width||el?.naturalHeight!==o.height)return b;
- const out={...b},right=b.left+b.width,epsilon=Math.min(2,s+.001);if(b.left<0&&b.left>=-epsilon)out.left=0;if(right>state.width&&right<=state.width+epsilon)out.width=state.width-out.left;else if(out.left!==b.left)out.width=right-out.left;return out;
+ const m=o?.gridExpansion,g=m?.original,el=o?.getElement?.(),s=o?.scaleX,bottom=m?.bottom??0;
+ if(!g||String(o.type).toLowerCase()!=='image'||o.layerRole!=='subject'||o.angle||o.skewX||o.skewY||o.flipX||o.flipY||o.clipPath||o.cropX||o.cropY||o.originX!=='left'||o.originY!=='top'||!Number.isFinite(s)||s<=0||![g.left,g.top,g.width,g.height,g.scaleX,g.scaleY,m.left,o.width,o.height,o.left,o.top,o.scaleY,state.width,state.height].every(Number.isFinite)||!Number.isInteger(m.left)||m.left<0||!Number.isInteger(bottom)||bottom<0||g.width<1||g.height<1||m.left+g.width>o.width||o.height!==g.height+bottom||Math.abs(s-g.scaleX)>.000001||Math.abs(o.scaleY-g.scaleY)>.000001||Math.abs(o.left-(g.left-m.left*s))>.001||Math.abs(o.top-g.top)>.001||el?.naturalWidth!==o.width||el?.naturalHeight!==o.height)return b;
+ const out={...b},right=b.left+b.width,epsilon=Math.min(2,s+.001);if(b.left<0&&b.left>=-epsilon)out.left=0;if(right>state.width&&right<=state.width+epsilon)out.width=state.width-out.left;else if(out.left!==b.left)out.width=right-out.left;const edge=b.top+b.height,ey=Math.min(2,o.scaleY+.001);if(bottom&&edge>state.height&&edge<=state.height+ey)out.height=state.height-b.top;return out;
 }
 export function resizeBackgroundOnly(state,width,height){
  installTextureBackgroundRenderer(state.F);
