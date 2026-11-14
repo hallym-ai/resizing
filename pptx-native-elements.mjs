@@ -3,6 +3,13 @@ let fabric;
 const F=async()=>{fabric||=await import('./vendor/layers/fabric.mjs');fabric.config.NUM_FRACTION_DIGITS=5;return fabric;};
 const clean=v=>Array.isArray(v)?v.map(clean):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).filter(([k])=>!['layoutManager','clipPath'].includes(k)).map(([k,x])=>[k,clean(x)])):v;
 const n=(x,f=0)=>Number.isFinite(parseFloat(x))?parseFloat(x):f;
+// clientWidth is integer-rounded, which can turn an otherwise fitting final
+// glyph into a new line. Preserve the browser's fractional content box.
+export function textContentBoxWidth(style,clientWidth){
+ const pad=n(style.paddingLeft)+n(style.paddingRight),border=n(style.borderLeftWidth)+n(style.borderRightWidth),css=String(style.width||'');
+ const width=/^\s*(?:\d+(?:\.\d*)?|\.\d+)px\s*$/i.test(css)?parseFloat(css):NaN;
+ return Math.max(1,Number.isFinite(width)?width-(style.boxSizing==='border-box'?pad+border:0):n(clientWidth)-pad);
+}
 function layoutPosition(el){let x=0,y=0;for(let node=el;node instanceof HTMLElement;node=node.offsetParent){x+=node.offsetLeft;y+=node.offsetTop;}return{x,y};}
 // Compose layout offsets and every group/shape CSS transform around its origin.
 function matrixToRoot(el,root){
@@ -16,7 +23,7 @@ export async function nativeText(el,root,info,ratio){
  if(!el||el instanceof SVGElement)return null;
  const style=getComputedStyle(el);if(style.writingMode!=='horizontal-tb'||el.querySelector('svg,canvas'))return null;
  const f=await F(),spans=[...el.querySelectorAll('span')].filter(s=>s.textContent),first=spans[0]||el,base=getComputedStyle(first),paragraphs=[...el.children].filter(c=>c.textContent),p=paragraphs[0]||el,ps=getComputedStyle(p);
- const fontSize=n(base.fontSize,20),boxWidth=Math.max(1,el.clientWidth-n(style.paddingLeft)-n(style.paddingRight));
+ const fontSize=n(base.fontSize,20),boxWidth=textContentBoxWidth(style,el.clientWidth);
  const lineHeight=n(ps.lineHeight,fontSize*1.16)/fontSize;
  const text=String(info.text||'').replace(/\r/g,'');if(!text.trim())return{empty:true};
  const styles={},defaults=textStyle(base);let line=0,column=0;

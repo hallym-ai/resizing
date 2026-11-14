@@ -1,5 +1,5 @@
 {
-  "release": "preserve-element-positions-20261114",
+  "release": "photo-background-20261114",
   "features": [
     "yoga",
     "workspace-controls",
@@ -33,6 +33,9 @@
     "trusted-outside-patch-fit",
     "unresolved-outside-warning",
     "whole-picture-fit-default",
-    "preserve-foreground-relative-position"
+    "preserve-foreground-relative-position",
+    "local-photo-separation-review",
+    "photo-residual-shared-transform",
+    "reviewed-photo-edge-extension"
   ]
 }

@@ -1,3 +1,4 @@
+import {clearVerifiedPictureRecords,registerVerifiedPictureCapture} from './verified-picture-object.mjs';
 import {sourceObjectCoverage,slideSourceObjectIds} from './source-background-separation.mjs';
 import {sourceDigest} from './outside-recovery.mjs';
 import {nativeText,nativeShape} from './pptx-native-elements.mjs';
@@ -36,6 +37,7 @@ export async function preparePptxCapture(root,{signal}={}){
 }
 
 export async function extractPptxObjects(root,original,{width,height,pixelRatio,signal,onProgress,provenance}){
+ clearVerifiedPictureRecords();
  // Isolated diagnostic; never used to change a visible or saved object.
  const outsideProbe={status:'diagnostic-only',records:[]};globalThis.coexOriginalOutsideProbe=outsideProbe;
  const mediaCoverage=await preparePptxCapture(root,{signal});
@@ -126,7 +128,7 @@ export async function extractPptxObjects(root,original,{width,height,pixelRatio,
     }catch(e){if(signal.aborted)throw e;outsideRec.mergeReason=String(e)}
    }else if(outsideRec&&edgeStrip)outsideRec.mergeReason='ambiguous-edge-strip';
    o.nativeKind='image';o.sourceStackIndex=i;o.layerRoleInferred=true;o.sourceImageFill=!!el.querySelector('svg image');
-   o.sourceElementId=String(info.id||i);o.sourceElementType=info.type||'shape';o.cutoutMethod='pptx-original-object';objects.push(o);
+   o.sourceElementId=String(info.id||i);o.sourceElementType=info.type||'shape';o.cutoutMethod='pptx-original-object';if(full&&info.type==='picture')registerVerifiedPictureCapture(o,outsideRec,W,H);objects.push(o);
   }finally{for(const [ancestor,color,bg,shadow]of styled){ancestor.style.backgroundColor=color;ancestor.style.backgroundImage=bg;ancestor.style.boxShadow=shadow;}if(canvas)canvas.width=canvas.height=0;if(cropped)cropped.canvas.width=cropped.canvas.height=0;}
   onProgress?.(i+1,nodes.length);await new Promise(resolve=>setTimeout(resolve,0));
  }

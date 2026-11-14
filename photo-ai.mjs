@@ -14,7 +14,7 @@ function infer(tensor,{signal,onProgress}){return new Promise((resolve,reject)=>
  try{getWorker().postMessage({id:currentId,tensor:tensor.buffer},[tensor.buffer]);}catch(e){active=null;cleanup();terminate();reject(e);}
 });}
 export async function removePhotoBackground(source,{signal,onProgress}={}){
- if(!aiPolicy.enabled)throw Error(aiPolicy.reason);
+ if(!aiPolicy.photoEnabled)throw Error(aiPolicy.photoReason||aiPolicy.reason);
  if(!globalThis.Worker||!globalThis.WebAssembly||!crypto.subtle)throw Error('이 브라우저는 로컬 사진 AI를 지원하지 않습니다.');
  const started=performance.now(),w=source.naturalWidth||source.width,h=source.naturalHeight||source.height;
  if(w*h>8000000)throw Error('사진 AI 분석 이미지는 800만 픽셀 이하로 사용해 주세요.');

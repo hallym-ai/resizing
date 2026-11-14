@@ -6,7 +6,8 @@ import {installOutsideRenderGuard} from './outside-render-guard.mjs';
 import {mountOutsideStatus} from './outside-status.mjs';
 import {registerTrustedOutsideReference,hasTrustedOutsideReference} from './final-outside-overlay.mjs';
 import './main-raster-background.mjs';
-import {partitionBackground,resizeBackgroundOnly,separationPreviews} from './background-only.mjs';
+import {partitionBackground,resizeBackgroundOnly,separationPreviews,revokeVerifiedPaperFits} from './background-only.mjs';
+import {revokeVerifiedPictureRecords} from './verified-picture-object.mjs';
 import {setMeasuredPanelBox} from './readability-panels.mjs';
 import {prepareMaterialPanel} from './material-surfaces.mjs';
 import {measureRenderedText} from './render-text-metrics.mjs';
@@ -25,6 +26,7 @@ import './layers.mjs';
 import {planLayout,validLayoutSize} from './layout-engine.mjs';
 import {inspectLayout,solverInfo} from './design-layout.mjs';
 import {extendSolidBackground} from './solid-background.mjs';
+import {registerPhotoExtension,invalidatePhotoExtensions,selectPhotoExtension,photoExtensionGeometry,preparePhotoExtension,applyPhotoExtension} from './background-extension-session.mjs';
 const $=id=>document.getElementById(id);
 const controls=document.createElement('section');controls.className='reflow-controls';controls.id='reflowControls';
 controls.innerHTML=`<h3>1단계 · 배경과 전체 요소 분리</h3><p>배경만 있는 화면과 배경을 뺀 전체 요소를 먼저 확인하세요. 이 단계에서는 원본 객체의 위치·크기·겹침을 유지합니다. 규격 변경은 분리 결과를 확인한 뒤 진행하세요.</p><div class="reflow-row"><label>출력 규격<select id="reflowRatio"><option value="">자유 크기 · 너비/높이 입력</option><option value="1080x1080">정사각형 · 1080 × 1080</option><option value="1920x1080">가로 · 1920 × 1080</option><option value="1080x1920">세로 · 1080 × 1920</option><option value="1800x600">가로 배너 · 1800 × 600</option></select></label><button class="doc-btn" id="reflowApply">배경만 크기 적용</button><button class="doc-btn" id="reflowUndo" disabled>크기 변경 전으로</button><button id="reflowNext" hidden disabled>다른 배치 적용</button></div><p id="reflowStatus" role="status" aria-live="polite">파일을 넣으면 배경과 보호 요소를 구분합니다.</p><label class="layer-help"><input type="checkbox" id="fitWholePictures" checked> 규격 변경 시 원본 그림의 전체 범위까지 맞춤</label><p class="layer-help">켜면 바깥으로 뻗은 별·선까지 포함해 전체 디자인을 같은 비율로 맞춥니다. 전체 디자인이 더 작아질 수 있습니다. 끄면 원본 프레임 기준을 유지하며, 새 여백이 없는 방향은 잘릴 수 있습니다.</p><details id="backgroundSeparationDetails" open><summary>배경과 전체 요소 · 분리 결과</summary><p id="backgroundSeparationStatus" role="status"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><figure style="margin:0"><figcaption>배경만</figcaption><img id="backgroundOnlyPreview" alt="다른 요소를 제외한 배경" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure><figure style="margin:0"><figcaption>배경을 뺀 전체 요소 · 투명 바탕</figcaption><img id="foregroundOnlyPreview" alt="배경과 구분된 보호 요소" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure></div><div class="reflow-row"><button type="button" class="doc-btn" id="saveSeparatedBackground" disabled>배경 PNG 저장</button><button type="button" class="doc-btn" id="saveSeparatedElements" disabled>전체 요소 PNG 저장</button></div><p>먼저 원본 슬라이드 배경과 그 위의 전체 요소를 나눕니다. 위치·크기·겹침은 유지하며, 글씨와 그림의 세부 인식은 다음 단계입니다. 그림 안에 합쳐진 배경까지 지운 결과는 아닙니다.</p></details><details><summary>자유 비율 입력</summary><div class="reflow-custom"><label>가로 비율<input id="reflowCustomX" type="number" min="1" max="10000" value="16"></label><span>:</span><label>세로 비율<input id="reflowCustomY" type="number" min="1" max="10000" value="9"></label><button id="reflowCustomApply" class="doc-btn">이 비율로 배경 변경</button></div></details>`;
@@ -46,6 +48,9 @@ const layoutSelections=new Map();
 let candidateContext='';
 let lastLayoutEngine='preserved-source-layout';let lastAutomaticDecision=null;
 let baseline=null,undo=null,lastRevision=-1,queued=null,composing=false,sizeTimer=null;
+globalThis.coexRegisterPhotoBackgroundExtension=registerPhotoExtension;
+window.addEventListener('coex:layer-source',()=>invalidatePhotoExtensions());
+window.addEventListener('coex:layer-edit',()=>{if(!composing){invalidatePhotoExtensions();revokeVerifiedPaperFits();revokeVerifiedPictureRecords();}});
 const attrs=['partialSolidProvenance','nativeBitmapProvenance','gridSourceUserEdited','gridSourceProvenance','gridExpansion','__outsideTrialVisible','objectCaching','textureBackgroundFrame','left','top','scaleX','scaleY','angle','originX','originY','flipX','flipY','width','height','fontSize','textAlign','textBackgroundColor','readabilityPanelBox','layerRole','styles','splitByGrapheme','lineHeight','direction','radius','strokeWidth','rx','ry','visible','layoutOverlapBasis','layoutGraphSource'];
 const tell=(text,error=false)=>{$('reflowStatus').textContent=text;$('reflowStatus').classList.toggle('error',error);};
 const api=()=>globalThis.coexLayerLayout;
@@ -365,6 +370,8 @@ function makeCompositeTrial(state,result,base,width,height,reviewed){
  }return null;
 }
 function decodeCompositeTrial(src){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('배경 이미지 합성 결과를 읽지 못했습니다.'));im.src=src;});}
+const photoResidual=o=>o.cutoutMethod==='photo-ai-residual-background';
+const photoExtensionNotice=p=>p.warning+(p.geometry.record.method==='photo-ai-residual-background'?' 상품 뒤는 복원되지 않아 상품을 옮기면 투명한 구멍이 보일 수 있습니다.':'');
 async function resizeEditorAtomic(width,height,{preset=null}={}){
  const serial=++atomicResizeSerial;clearTimeout(sizeTimer);const state=api()?.read();
  if(!trustedEditorState(state)){tell('새 파일이나 슬라이드의 편집 요소가 준비된 뒤 규격을 선택하세요.',true);return false;}
@@ -376,18 +383,19 @@ async function resizeEditorAtomic(width,height,{preset=null}={}){
  const context=state.sceneOutputKey,previous=capture(state),base=baseFor(state),expected={epoch:state.epoch,revision:state.revision};
  const current=()=>{const s=api()?.read();return serial===atomicResizeSerial&&trustedEditorState(s)&&s.epoch===expected.epoch&&s.revision===expected.revision&&s.sceneOutputKey===context&&Number($('wInput').value)===width&&Number($('hInput').value)===height;};
  const restoreInputs=()=>{const s=api()?.read();if(serial===atomicResizeSerial&&s&&s.epoch===expected.epoch&&s.revision===expected.revision&&s.sceneOutputKey===context&&globalThis.getLayerOutputContextKey?.()===context)targetInputs(s.width,s.height);};
- let target,promise,prepared,result,plan,decoded,recovered=null;targetInputs(width,height);
+ let target,promise,prepared,result,plan,decoded,recovered=null,photoGeometry,photoPlan;targetInputs(width,height);
  const expanded=state.objects.filter(o=>o.gridExpansion),baseIsCurrent=base.width===state.width&&base.height===state.height&&base.objects.every(v=>v.object.getElement?.()===v.imageElement&&['left','top','width','height','scaleX','scaleY'].every(k=>Object.is(v.object[k],v.values[k])));
  globalThis.coexGridPreflight={baseIsCurrent,count:expanded.length,base:[base.width,base.height],scene:[state.width,state.height]};if(baseIsCurrent&&expanded.length===1){try{const under=partitionBackground(state).backgrounds.map(x=>x.object);recovered=await verifyExpandedGrid({state,object:expanded[0],permittedUnderlays:under,makeCanvas:(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;},decode:decodeCompositeTrial,isCurrent:()=>current()&&!!api()?.matchesAtomicLiveGuard?.(liveGuard)});}catch{}if(!current())return false;if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);return false;}}
  globalThis.coexGridPreflight.recovered=!!recovered;composing=true;
  try{restore(base);const before={...state,width:base.width,height:base.height};if(recovered){const o=recovered.object;if(o.getElement?.()!==recovered.oldEl||o.getSrc?.()!==recovered.oldSrc)throw Error('격자 원본이 변경되어 변환을 중지했습니다.');o.setElement(recovered.raw);o.set({...recovered.original,gridExpansion:undefined});o.set('gridSourceProvenance',createRecoveredGridSourceProvenance(before,o,recovered.frame));o.setCoords();}
-  const reviewed=new Map(state.objects.filter(o=>validGridSourceProvenance(before,o)).map(o=>[o,{...o.gridSourceProvenance.frame}]));result=resizeBackgroundOnly(before,width,height,pictureFitOptions());exposeOutsideTrial(state);plan=makeCompositeTrial(state,result,base,width,height,reviewed);
+  const photoSource=selectPhotoExtension(before),reviewed=new Map(state.objects.filter(o=>validGridSourceProvenance(before,o)).map(o=>[o,{...o.gridSourceProvenance.frame}]));result=resizeBackgroundOnly(before,width,height,pictureFitOptions());photoGeometry=photoExtensionGeometry(photoSource,width,height);exposeOutsideTrial(state);plan=makeCompositeTrial(state,result,base,width,height,reviewed);
   if(recovered&&(!plan||plan.object!==recovered.object)){restore(base);result=resizeBackgroundOnly(before,width,height,pictureFitOptions());exposeOutsideTrial(state);plan=null;result.status='review';result.reason+=' 기존 격자는 원본을 유지했습니다. 새 규격의 연결을 확인하세요.';}else if(expanded.length&&!recovered&&baseIsCurrent){result.status='review';result.reason+=' 기존 격자는 원본을 유지했습니다. 새 규격의 연결을 확인하세요.';}
   target=capture({...state,width,height});}
  catch(error){restoreInputs();tell(error.message,true);return false;}finally{restore(previous);api()?.refresh();composing=false;}
  try{
+  if(photoGeometry){photoPlan=await preparePhotoExtension(photoGeometry,{makeCanvas:(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;},decode:decodeCompositeTrial});if(!current())return false;if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);return false;}}
   if(plan){decoded=await decodeCompositeTrial(plan.composite);if(!current())return false;if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);return false;}}
-  composing=true;try{restore(target);if(plan){if(!applyCompositeGrid(plan,decoded))throw Error('원본이 바뀌어 무늬 연결을 중지했습니다.');api().validateCompositeProject();result.status='review';result.reason+=' '+plan.warning;result.backgroundScope+=' 연결한 무늬를 확인하세요.';target=capture({...state,width,height});}promise=api().prepareAtomicSnapshot(width,height,{...expected,decision:result});}
+  composing=true;try{restore(target);if(photoPlan?.status==='review'){if(!applyPhotoExtension(photoPlan))throw Error('사진이 바뀌어 배경 연결을 중지했습니다.');api().validateCompositeProject();result.status='review';result.reason+=' '+photoExtensionNotice(photoPlan);result.backgroundScope='사진 가장자리 반사 후보를 연결했습니다. 반복과 이음선을 확인하세요.'+(photoResidual(photoPlan.geometry.object)?' 상품 뒤는 복원되지 않았습니다.':'');target=capture({...state,width,height});}else if(state.objects.some(o=>o.visible!==false&&(o.cutoutMethod==='photo-ai-estimated-inpaint'||photoResidual(o)))&&photoPlan?.reason!=='no-new-margin'){result.status='review';result.reason+=' 사진 배경의 원본·경계 확인이 부족해 새 여백 연결을 보류했습니다.';}if(plan){if(!applyCompositeGrid(plan,decoded))throw Error('원본이 바뀌어 무늬 연결을 중지했습니다.');api().validateCompositeProject();result.status='review';result.reason+=' '+plan.warning;result.backgroundScope+=' 연결한 무늬를 확인하세요.';target=capture({...state,width,height});}promise=api().prepareAtomicSnapshot(width,height,{...expected,decision:result});}
   finally{restore(previous);api()?.refresh();composing=false;}
   prepared=await promise;if(!current()){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);return false;}
   if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);if(current()){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);}return false;}
@@ -417,7 +425,7 @@ async function undoEditorAtomic(){
   if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);if(current()){rollbackInputs();tell('요소가 변경되었거나 이동·다중선택 중이어서 되돌리기를 중지했습니다. 선택을 해제하고 다시 시도하세요.',true);}return false;}
   composing=true;restore(target);let result;
   try{result=api().commitAtomic(w,h,expected,prepared);}catch(error){if(current()){restore(previous);api()?.refresh();rollbackInputs();tell(error.message,true);}globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);return false;}finally{composing=false;}
-  lastAutomaticDecision=decision;globalThis.coexBackgroundOnlyResult=decision;lastRevision=-1;baseline=null;undo=null;try{globalThis.coexSetPresetMetadata?.(null);$('reflowUndo').disabled=true;tell('재배치 전의 크기와 요소 배치를 복원했습니다.');outputNote.textContent='재배치 전으로 복원한 화면입니다.';}catch{}return true;
+  invalidatePhotoExtensions();lastAutomaticDecision=decision;globalThis.coexBackgroundOnlyResult=decision;lastRevision=-1;baseline=null;undo=null;try{globalThis.coexSetPresetMetadata?.(null);$('reflowUndo').disabled=true;tell('재배치 전의 크기와 요소 배치를 복원했습니다.');outputNote.textContent='재배치 전으로 복원한 화면입니다.';}catch{}return true;
  }catch(error){if(current()){rollbackInputs();tell(error.message,true);}return false;}
 }
 $('reflowUndo').onclick=()=>undoEditorAtomic();
@@ -476,11 +484,14 @@ globalThis.encodeTarget=async function(source,p,settings){
  const current=()=>{const live=api()?.read(),info=globalThis.getLayerAnalysisSource?.();return $('fitWholePictures').checked===fitWholePictures&&!!live&&live.epoch===state.epoch&&live.revision===state.revision&&live.sceneOutputKey===state.sceneOutputKey&&sceneMatchesSource(live,info)&&!!globalThis.isLayerOutputSource?.(origin)&&!!api()?.matchesAtomicLiveGuard?.(guard);};
  const outsideCurrent=await preloadOutsideTrial(state,current);
  if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
- const original=capture(state),base=baseFor(state),diagnostics={plan:globalThis.coexLastLayoutPlan,candidates:globalThis.coexLayoutCandidates,failure:globalThis.coexLayoutFailure};let image,decision;
+ const original=capture(state),base=baseFor(state),diagnostics={plan:globalThis.coexLastLayoutPlan,candidates:globalThis.coexLayoutCandidates,failure:globalThis.coexLayoutFailure};let image,decision,photoGeometry,photoPlan;
  try{
+  // Determine geometry while the source is staged, then restore before awaiting.
+  {const wasComposing=composing;composing=true;try{restore(base);const sourceState={...state,width:base.width,height:base.height},photoSource=selectPhotoExtension(sourceState);if(photoSource){resizeBackgroundOnly(sourceState,p.w,p.h,{includeWholePictures:fitWholePictures});photoGeometry=photoExtensionGeometry(photoSource,p.w,p.h);}}finally{restore(original);api().refresh();composing=wasComposing;}}
+  if(photoGeometry){photoPlan=await preparePhotoExtension(photoGeometry,{makeCanvas:(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;},decode:decodeCompositeTrial});if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');}
   // No await while the live scene temporarily has target geometry.
   const wasComposing=composing;composing=true;
-  try{restore(base);const sourceState={...state,width:base.width,height:base.height};decision=resizeBackgroundOnly(sourceState,p.w,p.h,{includeWholePictures:fitWholePictures});exposeOutsideTrial(state);image=api().snapshot(p.w,p.h);policy.record(image,decision);}
+  try{restore(base);const sourceState={...state,width:base.width,height:base.height};decision=resizeBackgroundOnly(sourceState,p.w,p.h,{includeWholePictures:fitWholePictures});if(photoPlan?.status==='review'){if(!applyPhotoExtension(photoPlan))throw Error('사진이 바뀌어 일괄 변환을 중단했습니다.');decision.status='review';decision.reason+=' '+photoExtensionNotice(photoPlan);decision.backgroundScope='사진 가장자리 반사 후보를 연결했습니다. 반복과 이음선을 확인하세요.'+(photoResidual(photoPlan.geometry.object)?' 상품 뒤는 복원되지 않았습니다.':'');}else if(state.objects.some(o=>o.visible!==false&&(o.cutoutMethod==='photo-ai-estimated-inpaint'||photoResidual(o)))&&photoPlan?.reason!=='no-new-margin'){decision.status='review';decision.reason+=' 사진 배경의 원본·경계 확인이 부족해 새 여백 연결을 보류했습니다.';}exposeOutsideTrial(state);image=api().snapshot(p.w,p.h);policy.record(image,decision);}
   finally{try{restore(original);api().refresh();globalThis.coexLastLayoutPlan=diagnostics.plan;globalThis.coexLayoutCandidates=diagnostics.candidates;globalThis.coexLayoutFailure=diagnostics.failure;}finally{composing=wasComposing;}}
   if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
   const blob=await originalEncode(image,p,{...settings,mode:'auto'});

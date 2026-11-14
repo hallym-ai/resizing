@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {partitionBackground,resizeBackgroundOnly} from './background-only.mjs';
+// These objects are geometry doubles, not rendered PPTX images.
+globalThis.document={createElement(){return {width:0,height:0,getContext(){return {drawImage(){},clearRect(){},fillRect(){},getImageData(){return {data:new Uint8ClampedArray(100*100*4).fill(255)}}}}}}};
+class Point{constructor(x,y){this.x=x;this.y=y;}}class FabricImage{_render(){}shouldCache(){} _toSVG(){return []}}
+const F={Point,FabricImage};
+function shape(values){return {type:'image',visible:true,originX:'left',originY:'top',left:0,top:0,width:100,height:100,scaleX:1,scaleY:1,opacity:1,...values,getBoundingRect(){return {left:this.left,top:this.top,width:this.width*this.scaleX,height:this.height*this.scaleY}},getCenterPoint(){return new Point(this.left+this.width*this.scaleX/2,this.top+this.height*this.scaleY/2)},set(values){Object.assign(this,values)},setCoords(){},setPositionByOrigin(p){this.left=p.x-this.width*this.scaleX/2;this.top=p.y-this.height*this.scaleY/2}}}
+function fixture(role,format,withPlate){const group='sample',source=shape({visible:false,photoInstanceGroup:group,photoInstanceKind:'source',originalPhotoSource:'original'}),background=shape({layerRole:role,sourceElementType:'picture',cutoutMethod:'instance-residual-background',photoInstanceGroup:group,photoInstanceKind:'background'}),foreground=shape({left:40,top:40,width:20,height:20,layerRole:'subject',photoInstanceGroup:group,photoInstanceKind:'part'}),plate=shape({type:'rect',fill:'#e25744',layerRole:'background'});return {F,width:100,height:100,epoch:1,revision:0,sourceFormat:format,inputKind:'layered',objects:[...(withPlate?[plate]:[]),source,background,foreground],background,foreground,plate};}
+function close(a,b){assert(Math.abs(a-b)<1e-7,`${a} != ${b}`)}
+function aligned(s){const b=s.background,f=s.foreground;close(b.left+40*b.scaleX,f.left);close(b.top+40*b.scaleY,f.top);close(20*b.scaleX,f.width*f.scaleX);close(20*b.scaleY,f.height*f.scaleY)}
+for(const role of ['background','other'])for(const format of ['pptx','json'])for(const includeWholePictures of [true,false])for(const withPlate of [true,false])for(const [w,h] of [[1080,1080],[1920,1080],[1080,1920],[1080,1350],[1379,611]]){
+ const s=fixture(role,format,withPlate),classification=partitionBackground(s);assert(classification.foreground.some(p=>p.object===s.background));assert(!classification.backgrounds.some(p=>p.object===s.background));const result=resizeBackgroundOnly(s,w,h,{includeWholePictures});aligned(s);assert.equal(result.crop,'none');assert.equal(result.stretch,false);if(withPlate){assert.equal(s.plate.width,w);assert.equal(s.plate.height,h)}s.width=w;s.height=h;s.revision++;resizeBackgroundOnly(s,1200,900,{includeWholePictures});aligned(s);
+}
+console.log('pass: photo residual and foreground remain aligned across roles, formats, 5 ratios, both fit modes, solid underlay and repeated resize');
