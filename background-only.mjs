@@ -134,35 +134,18 @@ export function resizeBackgroundOnly(state,width,height){
   else {originalFrame=recovered.frame;__outsideFit=outsideFitBounds(state,{foreground:parts.foreground,outputWidth:width,outputHeight:height,frame:originalFrame});}
  }
  const boxFor=({object:o})=>{const b=o.getBoundingRect(),t=typeof o.text==='string'?tightNativeBox(o,b):null;return t?{left:t.x,top:t.y,width:t.w,height:t.h}:gridVisibleFitBox(o,b,state);};
- const baselineBoxes=parts.foreground.map(boxFor);
- const baselineL=Math.min(originalFrame.x,...baselineBoxes.map(q=>q.left)),baselineT=Math.min(originalFrame.y,...baselineBoxes.map(q=>q.top));
- const baselineR=Math.max(originalFrame.x+originalFrame.w,...baselineBoxes.map(q=>q.left+q.width)),baselineB=Math.max(originalFrame.y+originalFrame.h,...baselineBoxes.map(q=>q.top+q.height));
- const baselineScale=Math.min(width/(baselineR-baselineL),height/(baselineB-baselineT)),baselineX=(width-(baselineR-baselineL)*baselineScale)/2-baselineL*baselineScale,baselineY=(height-(baselineB-baselineT)*baselineScale)/2-baselineT*baselineScale;
- // Do not change an existing design if all recovered pixels already fit.
- // On a JSON reload apply the verified source frame even if currently visible,
- // so the previously added canvas padding cannot be fitted a second time.
- const needsFit=!outsideFrameFailure&&(hasSavedOutside||__outsideFit.boxes.some(q=>baselineX+q.left*baselineScale<0||baselineY+q.top*baselineScale<0||baselineX+(q.left+q.width)*baselineScale>width||baselineY+(q.top+q.height)*baselineScale>height));
- const boxes=needsFit?parts.foreground.filter(({id})=>!footerIds.has(id)).map(boxFor):baselineBoxes;
- if(needsFit)boxes.push(...__outsideFit.boxes); globalThis.__outsideFitBefore={...__outsideFit,needsFit};
+ // Foreground layout is computed from the original visible frame alone. Do not
+ // shrink/move it to include extension pixels: those are rendered separately.
+ // On a cross-checked saved frame, an already-expanded footer is not part of the
+ // original content bounds; the existing footer routine will place it later.
+ const boxes=parts.foreground.filter(({id})=>!hasSavedOutside||!footerIds.has(id)).map(boxFor);
  const l=Math.min(originalFrame.x,...boxes.map(b=>b.left)),t=Math.min(originalFrame.y,...boxes.map(b=>b.top));
  const r=Math.max(originalFrame.x+originalFrame.w,...boxes.map(b=>b.left+b.width)),b=Math.max(originalFrame.y+originalFrame.h,...boxes.map(b=>b.top+b.height));
- // Reserve the independently verified footer before fitting the complete
- // ornament extent; otherwise moving the footer to the bottom could cover a
- // newly restored ornament, causing the existing safety check to refuse it.
- // Stay on the existing path when no supported outside pixels were recovered.
- let footerReserve=0,margin=0;
- if(needsFit&&__outsideFit.boxes.length){
-  margin=Math.min(12,width*.012,height*.012);
-  if(footerSource){
-   const band=footerEvidence&&sourceItems[footerEvidence.bandId];
-   if(band&&Number.isFinite(band.sourceBox.h)&&band.sourceBox.h>0)footerReserve=band.sourceBox.h;
-  }
- }
- const availableWidth=width-2*margin,availableHeight=height-2*margin;
- const scale=Math.min(availableWidth/(r-l),availableHeight/(b-t+footerReserve));
- const x=margin+(availableWidth-(r-l)*scale)/2;
- const y=margin+(availableHeight-(b-t+footerReserve)*scale)/2;
- globalThis.__outsideFitPlacement={margin,footerReserve,scale};
+ const scale=Math.min(width/(r-l),height/(b-t)),x=(width-(r-l)*scale)/2,y=(height-(b-t)*scale)/2;
+ const offsetX=x-l*scale,offsetY=y-t*scale;
+ const clipped=__outsideFit.boxes.filter(q=>offsetX+q.left*scale<0||offsetY+q.top*scale<0||offsetX+(q.left+q.width)*scale>width||offsetY+(q.top+q.height)*scale>height);
+ globalThis.__outsideFitBefore={...__outsideFit,needsFit:false,clipped:clipped.map(q=>q.id)};
+ globalThis.__outsideFitPlacement={margin:0,footerReserve:0,scale};
  const backgroundSet=new Set(parts.backgrounds.map(p=>p.object));
  // For a very different aspect ratio, cover can remove the entire supporting
  // surface. Stretch only the isolated background photo; never products/text.
@@ -191,7 +174,7 @@ export function resizeBackgroundOnly(state,width,height){
  globalThis.coexPartialSolidTrial=partial;
  const texture=parts.backgrounds.some(p=>p.textureProfile),photo=parts.backgrounds.some(p=>p.evidence==='separated-photo-cover'),bitmap=parts.backgrounds.some(p=>p.evidence===bitmapEvidence||p.evidence===jsonBitmapEvidence);
  const reason=bitmap?'독립된 전체 화면 그림을 배경 후보로 늘렸습니다. 그림 안의 글씨·로고 포함 여부와 왜곡은 확인이 필요합니다.':parts.separated?'배경만 새 규격에 맞췄습니다. 글씨·로고·상품의 상대 위치·겹침·비율을 유지합니다.':'독립 배경을 확인하지 못해 원본 전체를 보호했습니다. 배경 분리는 완료되지 않았습니다.';
- const outsideNotice=(__outsideFit.skipped.length?` 바깥 연결 ${__outsideFit.skipped.length}개는 원본, 효과, 범위 또는 출력 크기 확인이 필요해 전체 맞춤에서 제외되어 잘릴 수 있습니다.`:'')+(outsideFrameFailure?' 저장된 원본 영역을 확인하지 못해 기존 방식으로 크기를 조정했습니다. 장식 잘림과 반복 규격 변경 결과를 확인해 주세요.':'')+(__outsideFit.notes.length?' '+__outsideFit.notes.join(' '):'');
+ const outsideNotice=(clipped.length?' 원본 배치를 유지하여 일부 바깥 장식은 출력 경계 밖에 남습니다.':'')+(__outsideFit.skipped.length?` 바깥 연결 ${__outsideFit.skipped.length}개는 원본, 효과, 범위 또는 출력 크기 확인이 필요해 전체 맞춤에서 제외되어 잘릴 수 있습니다.`:'')+(outsideFrameFailure?' 저장된 원본 영역을 확인하지 못해 기존 방식으로 크기를 조정했습니다. 장식 잘림과 반복 규격 변경 결과를 확인해 주세요.':'')+(__outsideFit.notes.length?' '+__outsideFit.notes.join(' '):'');
  return {policy:'background-only-v1',sourceEpoch:state.epoch,width,height,inputKind:state.inputKind||'layered',path:'background-only',method:'background-only',status:!parts.separated||parts.unresolved.length||texture||photo||bitmap||partial.length||__partialReview.review||__outsideFit.skipped.length||__outsideFit.notes.length||__outsideFit.boxes.length?'review':'ready',reason:reason+(partial.length?' 독립 단색 영역을 양 끝에 연결했습니다. 영역 용도와 경계를 확인하세요.':'')+(__partialReview.edited||!partial.length?__partialReview.reason:'')+outsideNotice,backgroundScope:bitmap?'독립 그림을 배경 후보로 비균등 확대했습니다. 이미지에 포함된 글씨·로고와 배경 왜곡을 직접 확인하세요. AI 생성이 아닙니다.':photo?(stretchPhoto?'분리된 배경 사진을 화면에 늘려 맞췄습니다. 배경의 모양과 투명 영역을 확인하세요.':'분리된 배경 사진을 비율을 유지해 화면에 맞췄습니다. 가장자리 잘림과 투명 영역을 확인하세요.'):texture?'분리된 종이·벽돌 배경 질감을 바깥 영역에 반사 연결했습니다. 배경 추정·반복 무늬·이음선 검토 필요; AI 생성 아님':'확인된 단색·벡터 배경만 확장',crop:photo&&!stretchPhoto?'background-cover':'none',stretch:stretchPhoto,rightEdge,foregroundScale:scale,foregroundOffset:{x:x-l*scale,y:y-t*scale},separation:{status:parts.separated?'separated':'unseparated',backgrounds:parts.backgrounds.map(({id,name,evidence,textureProfile})=>({id,name,evidence,textureProfile})),foregroundIds:parts.foreground.map(p=>p.id),unresolved:parts.unresolved}};
 }
 
