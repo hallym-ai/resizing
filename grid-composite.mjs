@@ -1,3 +1,5 @@
+import {verifyExpandedGrid as verifyLegacyGridForRecoveryOnly} from './legacy-grid-composite.mjs';
+import {modelGrid,drawOutside} from './param-grid.mjs';
 import {safeStoredImageHeader} from './safe-image-header.mjs';
 // Original pixels are kept in the middle of the composite bitmap;
 // source metadata is inert until separately verified. Never delete user data.
@@ -32,27 +34,15 @@ export function detectHorizontalGridPhase({data,width:w,height:h}){
 export function encodeCompositeGrid({state,object,sourceFrame,targetFrame,pixels,permittedUnderlays=[],makeCanvas,reviewedJson=false}){
  if(!object||object.gridExpansion||typeof makeCanvas!=='function')return null;
  const plan=inspectGridCandidate({state,object,sourceFrame,targetFrame,pixels,permittedUnderlays,reviewedJson});if(!plan)return null;
+ // Effects on any lower layer may paint beyond its bounding box. Abort even
+ // when the lower object was otherwise nominated as an underlay.
+ for(const o of state.objects.slice(0,state.objects.indexOf(object)))if(o.visible!==false&&(String(o.type).toLowerCase()==='group'||o.group||o.shadow||o.clipPath||o.filters?.length||o.trialOutsideRestore||o.__outsideTrialVisible))return null;
  const original=object.getSrc?.();if(typeof original!=='string'||original.length>MAX_ORIGINAL||!/^data:image\/(png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(original))return null;
- // Transparency is allowed, but the canvas must reproduce every central RGBA
- // channel exactly after its premultiplied-alpha round trip.
- const phase=detectVerticalGridPhase(pixels);if(!phase)return null;
- const w=object.width,h=object.height,left=Math.max(0,Math.ceil((sourceFrame.left-targetFrame.left)/object.scaleX)),right=Math.max(0,Math.ceil((targetFrame.right-sourceFrame.right)/object.scaleX)),bottom=Math.max(0,Math.ceil((targetFrame.bottom-sourceFrame.bottom)/object.scaleY)),width=left+w+right,height=h+bottom,vertical=bottom?detectHorizontalGridPhase(pixels):null;if(bottom&&!vertical)return null;
- if(![w,h,left,right,bottom,width,height].every(Number.isSafeInteger)||left<0||right<0||bottom<0||(!left&&!right&&!bottom)||width*height>MAX_PIXELS||left>w*32||right>w*32||bottom>h*32)return null;
- let c;try{c=makeCanvas(width,height);if(!c||c.width!==width||c.height!==height)return null;const ctx=c.getContext('2d');if(!ctx)return null;const start=-left,end=w+right;
-  // Each reflection uses a fitted grid line or cell center as its axis.
-  // Clip each side before painting; the middle is copied exactly below.
-  const l=phase.leftAxis,r=phase.rightAxis;
-  ctx.save();try{ctx.beginPath();ctx.rect(0,0,left,h);ctx.clip();for(let n=0;n<Math.ceil((left+w)/w)+1;n++){ctx.save();try{if(n%2===0){ctx.translate(2*l-n*w-start,0);ctx.scale(-1,1);}else ctx.translate(2*l-(n+1)*w-start,0);ctx.drawImage(plan.element,0,0,w,h);}finally{ctx.restore();}}}finally{ctx.restore();}
-  ctx.save();try{ctx.beginPath();ctx.rect(left+w,0,right,h);ctx.clip();for(let n=0;n<Math.ceil((right+w)/w)+1;n++){ctx.save();try{if(n%2===0){ctx.translate(2*r+n*w-start,0);ctx.scale(-1,1);}else ctx.translate(2*r+(n-1)*w-start,0);ctx.drawImage(plan.element,0,0,w,h);}finally{ctx.restore();}}}finally{ctx.restore();}
-  // Blend the torn transparent edge just outside the source. Internal source
-  // pixels are never touched; only alpha transitions and formerly transparent
-  // color are adjusted. This leaves opaque grid lines unchanged.
-  const feather=Math.min(16,left,right);if(feather>0){for(const side of ['left','right']){const startX=side==='left'?left-feather:left+w,patch=ctx.getImageData(startX,0,feather,h),edgeX=side==='left'?0:w-1;for(let y=0;y<h;y++)for(let x=0;x<feather;x++){const i=(y*feather+x)*4,j=(y*w+edgeX)*4,dist=side==='left'?feather-x:x+1,t=dist/feather,t2=t*t*(3-2*t),before=patch.data[i+3],sourceAlpha=pixels.data[j+3],alpha=Math.round(sourceAlpha*(1-t2)+before*t2);if(before===0&&alpha>0&&sourceAlpha>0)for(let q=0;q<3;q++)patch.data[i+q]=pixels.data[j+q];patch.data[i+3]=alpha;}ctx.putImageData(patch,startX,0);}}
-  const center=ctx.createImageData(w,h);center.data.set(pixels.data);ctx.putImageData(center,left,0);const verify=ctx.getImageData(left,0,w,h).data;for(let i=0;i<verify.length;i++)if(verify[i]!==pixels.data[i])return null;
-  if(bottom){const a=vertical.axis,p=vertical.period,count=Math.ceil((height-a)/p)+1;ctx.save();try{ctx.beginPath();ctx.rect(0,h,width,bottom);ctx.clip();for(let n=0;n<count;n++){ctx.save();try{if(n%2===0){ctx.translate(0,a+n*p+p);ctx.scale(1,-1);ctx.drawImage(c,0,a-p,width,p,0,0,width,p);}else ctx.drawImage(c,0,a-p,width,p,0,a+n*p,width,p);}finally{ctx.restore();}}}finally{ctx.restore();}}
-  const composite=c.toDataURL('image/png');if(!composite.startsWith('data:image/png;base64,')||composite.length>MAX_ENCODED)return null;
-  return {object,element:plan.element,composite,left,bottom,width,height,phase,vertical,frame:{...sourceFrame},canvasSize:{width:targetFrame.right,height:targetFrame.bottom},source:original,original:{left:object.left,top:object.top,width:w,height:h,scaleX:object.scaleX,scaleY:object.scaleY},warning:'반복 무늬를 추정해 '+(bottom?(left||right?'좌우와 아래':'아래'):'좌우')+'를 연결했습니다. 이미지 안 글씨·로고와 경계를 확인하세요.'};
- }catch{return null;}finally{if(c){c.width=0;c.height=0;}}
+ const w=object.width,h=object.height,left=Math.max(0,Math.ceil((sourceFrame.left-targetFrame.left)/object.scaleX)),right=Math.max(0,Math.ceil((targetFrame.right-sourceFrame.right)/object.scaleX)),bottom=Math.max(0,Math.ceil((targetFrame.bottom-sourceFrame.bottom)/object.scaleY));
+ if(![w,h,left,right,bottom].every(Number.isSafeInteger)||(!left&&!right&&!bottom)||w*h>2000000||(w+left+right)*(h+bottom)>MAX_PIXELS||left>w*32||right>w*32||bottom>h*32)return null;
+ const model=modelGrid({data:pixels?.data,width:w,height:h,detectVerticalGridPhase});if(!model)return null;
+ const result=drawOutside({data:pixels.data,width:w,height:h,left,right,bottom,model});if(!result)return null;let c;
+ try{c=makeCanvas(result.width,result.height);if(!c||c.width!==result.width||c.height!==result.height)return null;const x=c.getContext('2d',{willReadFrequently:true}),img=x.createImageData(result.width,result.height);img.data.set(result.data);x.putImageData(img,0,0);const central=x.getImageData(left,0,w,h).data;for(let i=0;i<central.length;i++)if(central[i]!==pixels.data[i])return null;const composite=c.toDataURL('image/png');if(!composite.startsWith('data:image/png;base64,')||composite.length>MAX_ENCODED)return null;return {object,element:plan.element,composite,left,bottom,width:result.width,height:result.height,frame:{...sourceFrame},canvasSize:{width:targetFrame.right,height:targetFrame.bottom},source:original,original:{left:object.left,top:object.top,width:w,height:h,scaleX:object.scaleX,scaleY:object.scaleY},warning:model.warning};}catch{return null}finally{if(c)c.width=c.height=0;}
 }
 // Only a scene-owner transaction may call this after validating current epoch,
 // source, scene signature, decoded image dimensions and project size.
@@ -62,10 +52,15 @@ export function applyCompositeGrid(plan,decoded){const o=plan?.object,g=plan?.or
 // Reconstruct the complete old bitmap from its original asset and compare the
 // resulting PNG byte-for-byte before allowing an ephemeral original restore.
 // Metadata alone never grants permission to discard the current composite.
-export async function verifyExpandedGrid({state,object,permittedUnderlays=[],makeCanvas,decode,isCurrent}){
+async function verifyProceduralGrid({state,object,permittedUnderlays=[],makeCanvas,decode,isCurrent}){
  const trace=globalThis.coexGridVerifyTrace={stage:'precondition'};const m=object?.gridExpansion,g=m?.original,f=m?.frame,size=m?.canvasSize,oldSrc=object?.getSrc?.(),oldEl=object?.getElement?.();if(!m||!g||!f||!size||object.gridSourceUserEdited||object.layerLocked||object.layerRole!=='subject'||object.layerRoleInferred!==true||object.layoutManualRole||object.layoutManualGroup||object.group||object.clipPath||object.shadow||object.filters?.length||object.angle||object.skewX||object.skewY||object.flipX||object.flipY||object.cropX||object.cropY||(object.opacity??1)!==1||typeof isCurrent!=='function'||typeof decode!=='function'||!isCurrent())return null;
  if(![g.left,g.top,g.width,g.height,g.scaleX,g.scaleY,m.left,m.bottom,f.left,f.top,f.right,f.bottom,size.width,size.height].every(Number.isFinite)||!Number.isInteger(m.left)||!Number.isInteger(m.bottom)||m.left<0||m.bottom<0||g.width<=0||g.height<=0||g.scaleX<=0||g.scaleY<=0||size.width!==state.width||size.height!==state.height||object.width<g.width+m.left||object.height!==g.height+m.bottom||Math.abs(object.left-(g.left-m.left*g.scaleX))>.001||Math.abs(object.top-g.top)>.001||Math.abs(object.scaleX-g.scaleX)>.000001||Math.abs(object.scaleY-g.scaleY)>.000001||oldEl?.naturalWidth!==object.width||oldEl?.naturalHeight!==object.height||typeof m.source!=='string'||!/^data:image\/(png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(m.source)||m.source.length>MAX_ORIGINAL)return null;
  trace.stage='header';if(!safeStoredImageHeader(m.source,g.width,g.height)){trace.stage='unsafe-header';return null;}trace.stage='decode';let raw;try{raw=await decode(m.source);}catch{return null;}if(!isCurrent()||object.getSrc?.()!==oldSrc||object.getElement?.()!==oldEl||raw.naturalWidth!==g.width||raw.naturalHeight!==g.height)return null;
  trace.stage='rebuild';const fake={...object,...g,type:object.type,gridExpansion:undefined,gridSourceProvenance:undefined,getElement:()=>raw,getSrc:()=>m.source,getBoundingRect(){return {left:this.left,top:this.top,width:this.width*this.scaleX,height:this.height*this.scaleY}},_render:object._render};const objects=state.objects.map(x=>x===object?fake:x),st={...state,objects};let c;
  try{c=makeCanvas(g.width,g.height);const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(raw,0,0);const pixels={data:x.getImageData(0,0,g.width,g.height).data,width:g.width,height:g.height};const args={state:st,object:fake,sourceFrame:f,targetFrame:{left:0,top:0,right:size.width,bottom:size.height},pixels,permittedUnderlays,makeCanvas,reviewedJson:state.sourceFormat==='json'};trace.candidate=!!inspectGridCandidate(args);trace.attributes={type:fake.type,role:fake.layerRole,inferred:fake.layerRoleInferred,locked:fake.layerLocked,sourceType:fake.sourceElementType,method:fake.cutoutMethod,frame:f,bounds:fake.getBoundingRect(),format:state.sourceFormat};const plan=encodeCompositeGrid(args);trace.result={plan:!!plan,bytes:!!plan&&plan.composite===oldSrc,width:!!plan&&plan.width===object.width,height:!!plan&&plan.height===object.height,left:!!plan&&plan.left===m.left,bottom:!!plan&&plan.bottom===m.bottom,current:isCurrent()};if(!plan||plan.composite!==oldSrc||plan.width!==object.width||plan.height!==object.height||plan.left!==m.left||plan.bottom!==m.bottom||!isCurrent())return null;trace.stage='verified';return {object,raw,oldSrc,oldEl,frame:{...f},original:{...g},metadata:m};}catch(e){trace.stage='error';trace.error=String(e?.message||e);return null;}finally{if(c)c.width=c.height=0;}
 }
+
+// The legacy renderer is used only in an offscreen byte-equality check; it
+// never commits or displays new mirrored pixels. New output always comes from
+// the procedural encoder above. Unsupported or edited data stays unchanged.
+export async function verifyExpandedGrid(args){let result=await verifyProceduralGrid(args);if(result){globalThis.coexGridRecoveryMode='procedural';return result}if(typeof args?.isCurrent!=='function'||!args.isCurrent())return null;result=await verifyLegacyGridForRecoveryOnly(args);if(result)globalThis.coexGridRecoveryMode='legacy-verified-only';return result;}
