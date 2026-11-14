@@ -26,7 +26,9 @@ import './layers.mjs';
 import {planLayout,validLayoutSize} from './layout-engine.mjs';
 import {inspectLayout,solverInfo} from './design-layout.mjs';
 import {extendSolidBackground} from './solid-background.mjs';
-import {registerPhotoExtension,invalidatePhotoExtensions,selectPhotoExtension,photoExtensionGeometry,preparePhotoExtension,applyPhotoExtension} from './background-extension-session.mjs';
+import {registerPhotoExtension,invalidatePhotoExtensions,selectPhotoExtension,selectPartialPhotoExtension,isPartialPhotoCurrent,isPartialPhotoBase,photoExtensionGeometry,preparePhotoExtension,applyPhotoExtension} from './background-extension-session.mjs';
+import {planPartialPhotoExtension,preparePartialPhotoSide} from './partial-photo-extension.mjs';
+import {createPartialPatchManager} from './partial-photo-patches.mjs';
 const $=id=>document.getElementById(id);
 const controls=document.createElement('section');controls.className='reflow-controls';controls.id='reflowControls';
 controls.innerHTML=`<h3>1단계 · 배경과 전체 요소 분리</h3><p>배경만 있는 화면과 배경을 뺀 전체 요소를 먼저 확인하세요. 이 단계에서는 원본 객체의 위치·크기·겹침을 유지합니다. 규격 변경은 분리 결과를 확인한 뒤 진행하세요.</p><div class="reflow-row"><label>출력 규격<select id="reflowRatio"><option value="">자유 크기 · 너비/높이 입력</option><option value="1080x1080">정사각형 · 1080 × 1080</option><option value="1920x1080">가로 · 1920 × 1080</option><option value="1080x1920">세로 · 1080 × 1920</option><option value="1800x600">가로 배너 · 1800 × 600</option></select></label><button class="doc-btn" id="reflowApply">배경만 크기 적용</button><button class="doc-btn" id="reflowUndo" disabled>크기 변경 전으로</button><button id="reflowNext" hidden disabled>다른 배치 적용</button></div><p id="reflowStatus" role="status" aria-live="polite">파일을 넣으면 배경과 보호 요소를 구분합니다.</p><label class="layer-help"><input type="checkbox" id="fitWholePictures" checked> 규격 변경 시 원본 그림의 전체 범위까지 맞춤</label><p class="layer-help">켜면 바깥으로 뻗은 별·선까지 포함해 전체 디자인을 같은 비율로 맞춥니다. 전체 디자인이 더 작아질 수 있습니다. 끄면 원본 프레임 기준을 유지하며, 새 여백이 없는 방향은 잘릴 수 있습니다.</p><details id="backgroundSeparationDetails" open><summary>배경과 전체 요소 · 분리 결과</summary><p id="backgroundSeparationStatus" role="status"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><figure style="margin:0"><figcaption>배경만</figcaption><img id="backgroundOnlyPreview" alt="다른 요소를 제외한 배경" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure><figure style="margin:0"><figcaption>배경을 뺀 전체 요소 · 투명 바탕</figcaption><img id="foregroundOnlyPreview" alt="배경과 구분된 보호 요소" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure></div><div class="reflow-row"><button type="button" class="doc-btn" id="saveSeparatedBackground" disabled>배경 PNG 저장</button><button type="button" class="doc-btn" id="saveSeparatedElements" disabled>전체 요소 PNG 저장</button></div><p>먼저 원본 슬라이드 배경과 그 위의 전체 요소를 나눕니다. 위치·크기·겹침은 유지하며, 글씨와 그림의 세부 인식은 다음 단계입니다. 그림 안에 합쳐진 배경까지 지운 결과는 아닙니다.</p></details><details><summary>자유 비율 입력</summary><div class="reflow-custom"><label>가로 비율<input id="reflowCustomX" type="number" min="1" max="10000" value="16"></label><span>:</span><label>세로 비율<input id="reflowCustomY" type="number" min="1" max="10000" value="9"></label><button id="reflowCustomApply" class="doc-btn">이 비율로 배경 변경</button></div></details>`;
@@ -42,15 +44,25 @@ const outputNote=document.createElement('p');outputNote.id='reflowOutputNote';ou
 // undo scene cannot silently lose outside patches when its source-frame trust
 // cannot be re-established.
 const outsideReferenceNotice=document.createElement('p');outsideReferenceNotice.id='outsideReferenceNotice';outsideReferenceNotice.className='layer-help';outsideReferenceNotice.setAttribute('role','status');outsideReferenceNotice.setAttribute('aria-live','polite');outsideReferenceNotice.hidden=true;$('reflowStatus').after(outsideReferenceNotice);
+const partialEditNotice=document.createElement('p');partialEditNotice.id='partialPhotoEditNotice';partialEditNotice.className='layer-help';partialEditNotice.setAttribute('role','status');partialEditNotice.setAttribute('aria-live','polite');partialEditNotice.hidden=true;outsideReferenceNotice.after(partialEditNotice);
 const semanticMemory=new WeakMap();
 window.addEventListener('coex:semantic-reset',e=>{for(const o of e.detail||[])semanticMemory.delete(o);for(const o of api()?.read()?.objects||[]){if(o.layoutOverlapBasis)o.set('layoutOverlapBasis',undefined);if(o.layoutGraphSource)o.set('layoutGraphSource',undefined);}baseline=null;});
 const layoutSelections=new Map();
 let candidateContext='';
 let lastLayoutEngine='preserved-source-layout';let lastAutomaticDecision=null;
 let baseline=null,undo=null,lastRevision=-1,queued=null,composing=false,sizeTimer=null;
+const partialPatchManager=createPartialPatchManager();
 globalThis.coexRegisterPhotoBackgroundExtension=registerPhotoExtension;
-window.addEventListener('coex:layer-source',()=>invalidatePhotoExtensions());
-window.addEventListener('coex:layer-edit',()=>{if(!composing){invalidatePhotoExtensions();revokeVerifiedPaperFits();revokeVerifiedPictureRecords();}});
+window.addEventListener('coex:layer-source',()=>{partialEditNotice.hidden=true;invalidatePhotoExtensions();});
+window.addEventListener('coex:history-source',()=>{const retained=(api()?.read()?.objects||[]).some(o=>o.cutoutMethod==='partial-photo-extension-review'&&!partialPatchManager.isManaged(o));partialEditNotice.hidden=!retained;if(retained)partialEditNotice.textContent='저장된 사진 배경 연결은 다시 확장할 근거를 확인하지 못했습니다. 위치와 이음을 확인하거나 해당 레이어를 삭제하세요.';});
+window.addEventListener('coex:layer-edit',()=>{if(!composing){
+ const objects=api()?.read()?.objects||[],change=partialPatchManager.revokeAfterEdit(objects);
+ const retained=objects.some(o=>o.canvas&&o.cutoutMethod==='partial-photo-extension-review'&&!partialPatchManager.isManaged(o));
+ if(change.removed){partialEditNotice.hidden=false;partialEditNotice.textContent='편집 내용이 바뀌어 자동 사진 배경 연결을 해제했습니다. 사진을 다시 확인해 주세요.';}
+ if(change.preserved||retained){partialEditNotice.hidden=false;partialEditNotice.textContent='저장했거나 직접 편집한 사진 배경 연결이 남아 있습니다. 위치와 이음을 확인하거나 해당 레이어를 삭제하세요.';}
+ else if(!change.removed)partialEditNotice.hidden=true;
+ invalidatePhotoExtensions();revokeVerifiedPaperFits();revokeVerifiedPictureRecords();
+}});
 const attrs=['partialSolidProvenance','nativeBitmapProvenance','gridSourceUserEdited','gridSourceProvenance','gridExpansion','__outsideTrialVisible','objectCaching','textureBackgroundFrame','left','top','scaleX','scaleY','angle','originX','originY','flipX','flipY','width','height','fontSize','textAlign','textBackgroundColor','readabilityPanelBox','layerRole','styles','splitByGrapheme','lineHeight','direction','radius','strokeWidth','rx','ry','visible','layoutOverlapBasis','layoutGraphSource'];
 const tell=(text,error=false)=>{$('reflowStatus').textContent=text;$('reflowStatus').classList.toggle('error',error);};
 const api=()=>globalThis.coexLayerLayout;
@@ -63,8 +75,8 @@ function updateOutsideReferenceNotice(state){
 }
 const nativeText=o=>['text','textbox','itext'].includes(String(o.type).toLowerCase());
 function capture(state){return{epoch:state.epoch,revision:state.revision,width:state.width,height:state.height,objects:state.objects.map(o=>({object:o,imageElement:o.getElement?.(),values:Object.fromEntries(attrs.map(k=>[k,k==='styles'?structuredClone(o[k]):o[k]]))}))};}
-function matching(saved,state){return saved&&saved.epoch===state.epoch&&saved.objects.length===state.objects.length&&saved.objects.every(x=>state.objects.includes(x.object));}
-function restore(saved){const live=api()?.read();if(live&&saved.objects.length===live.objects.length&&saved.objects.every(x=>live.objects.includes(x.object)))api().reorder?.(saved.objects.map(x=>x.object));for(const {object,imageElement,values}of saved.objects){if(imageElement&&object.getElement?.()!==imageElement)object.setElement(imageElement);object.set({...values,styles:structuredClone(values.styles)});if(nativeText(object))object.initDimensions();object.setCoords();}}
+function matching(saved,state){return saved&&saved.epoch===state.epoch&&partialPatchManager.sameMembers(saved.objects.map(x=>x.object),state.objects);}
+function restore(saved){const live=api()?.read(),canvas=live?.objects.find(o=>o.canvas)?.canvas;if(live&&canvas)partialPatchManager.reconcile(canvas,saved.objects.map(x=>x.object));for(const {object,imageElement,values}of saved.objects){if(imageElement&&object.getElement?.()!==imageElement)object.setElement(imageElement);object.set({...values,styles:structuredClone(values.styles)});if(nativeText(object))object.initDimensions();object.setCoords();}}
 function rememberSemanticUnits(plan,state,geometry){
  for(const unit of plan.semanticUnits||[])for(const id of unit.ids){
   const object=state.objects[id];
@@ -372,6 +384,52 @@ function makeCompositeTrial(state,result,base,width,height,reviewed){
 function decodeCompositeTrial(src){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('배경 이미지 합성 결과를 읽지 못했습니다.'));im.src=src;});}
 const photoResidual=o=>o.cutoutMethod==='photo-ai-residual-background';
 const photoExtensionNotice=p=>p.warning+(p.geometry.record.method==='photo-ai-residual-background'?' 상품 뒤는 복원되지 않아 상품을 옮기면 투명한 구멍이 보일 수 있습니다.':'');
+const partialSideName={left:'왼쪽',right:'오른쪽',top:'위쪽',bottom:'아래쪽'};
+function planPartialPhoto(state,selected,result,width,height){
+ if(!selected||!isPartialPhotoCurrent(selected)||!result?.foregroundOffset)return null;
+ const live=api()?.read(),objects=live?.objects||[],index=objects.indexOf(selected.source),b=selected.object.getBoundingRect?.();
+ if(index<0||!b)return null;
+ const layers=objects.map(o=>{const q=o.getBoundingRect?.();return {object:o,visible:o.visible!==false,box:q?{x:q.left,y:q.top,width:q.width,height:q.height}:null,
+  hasEffects:!!(o.shadow||o.clipPath||o.group||o.filters?.length||o.__outsideTrialVisible||o.trialOutsideRestore||o.stroke&&o.strokeWidth),group:!!o.group};});
+ const photo={object:selected.object,insertBefore:selected.source,sourceBox:selected.sourceBox,outputBox:{x:b.left,y:b.top,width:b.width,height:b.height},paintIndex:index,
+  sourcePixelsWidth:selected.record.width,sourcePixelsHeight:selected.record.height,axisAligned:true,opacity:1,composite:'source-over',hasEffects:false};
+ return planPartialPhotoExtension({photo,sourceWidth:state.width,sourceHeight:state.height,targetWidth:width,targetHeight:height,scale:result.foregroundScale,offset:result.foregroundOffset,layers,
+  isTrustedPhoto:p=>p.object===selected.object&&isPartialPhotoCurrent(selected),isVerifiedBase:l=>isPartialPhotoBase(l,{width,height})});
+}
+async function preparePartialPhoto(plan,selected,current){
+ if(!plan)return null;const result={patches:[],blocked:[...(plan.blocked||[])],status:'review',reason:plan.reason||null};
+ for(const side of plan.plans||[]){
+  const proposal=await preparePartialPhotoSide(side,{pixels:selected.record.pixels,foregroundMask:selected.record.mask,isCurrent:()=>current()&&isPartialPhotoCurrent(selected)});
+  if(proposal.status==='cancelled'||!current())throw Error('원본이나 요소가 바뀌어 배경 연결을 중지했습니다.');
+  if(proposal.status!=='review'){result.blocked.push({side:side.side,reason:proposal.reason});continue;}
+  const c=document.createElement('canvas');c.width=proposal.width;c.height=proposal.height;let src;
+  try{const ctx=c.getContext('2d'),data=ctx.createImageData(c.width,c.height);data.data.set(proposal.pixels);ctx.putImageData(data,0,0);src=c.toDataURL('image/png');}finally{c.width=c.height=0;}
+  const element=await decodeCompositeTrial(src);if(!current()||!isPartialPhotoCurrent(selected))throw Error('원본이나 요소가 바뀌어 배경 연결을 중지했습니다.');
+  result.patches.push({proposal,element});
+ }
+ result.reason=result.patches.length?'reviewed-patches-applied':result.blocked.some(x=>x.reason!=='no-verified-margin')?'all-directions-blocked':plan.reason&&plan.reason!=='candidate'?plan.reason:'no-safe-side';
+ return result;
+}
+function attachPartialPhoto(prepared,selected,F){
+ if(!prepared?.patches.length)return [];
+ const canvas=selected.source.canvas;if(!canvas||!isPartialPhotoCurrent(selected))throw Error('사진이 바뀌어 배경 연결을 중지했습니다.');
+ const created=[];
+ try{for(const {proposal,element}of prepared.patches){const at=canvas.getObjects().indexOf(selected.source);if(at<0||canvas.size()+1>200)throw Error('배경 연결 요소를 추가할 수 없습니다.');
+  const p=partialPatchManager.mark(new F.FabricImage(element,{originX:'left',originY:'top',left:proposal.placement.left,top:proposal.placement.top,
+   scaleX:proposal.placement.scaleX,scaleY:proposal.placement.scaleY,objectCaching:false,strokeWidth:0,layerRole:'other',layerLocked:true,
+   lockMovementX:true,lockMovementY:true,lockScalingX:true,lockScalingY:true,lockRotation:true,hasControls:false,selectable:false,evented:false,perPixelTargetFind:true,
+   layerName:'사진 '+partialSideName[proposal.side]+' 배경 연결 · 검토 필요',sourceElementType:'picture',cutoutMethod:'partial-photo-extension-review'}));
+  canvas.insertAt(at,p);p.setCoords();created.push(p);
+ }return created;}catch(error){created.forEach(o=>{canvas.remove(o);o.dispose?.();});throw error;}
+}
+function partialPhotoNotice(prepared){
+ const done=prepared.patches.map(p=>partialSideName[p.proposal.side]),reasons={'foreground-touches-edge':'상품이 가장자리에 닿아','transparent-edge':'가장자리가 반투명해','would-cover-lower-layer':'다른 요소를 가릴 수 있어','lower-layer-unknown':'아래 요소를 확인하지 못해','size-budget':'연결 범위가 너무 커서'};
+ const blocked=prepared.blocked.filter(p=>p.reason!=='no-verified-margin').map(p=>partialSideName[p.side]+'은 '+(reasons[p.reason]||'안전한 연결을 확인하지 못해'));
+ return (done.length?done.join('·')+' 여백에 사진 가장자리를 반사했습니다. 반복과 이음을 확인하세요.':'')+
+  (blocked.length?' '+blocked.join(', ')+' 연결을 보류했습니다.':'')+
+  (!done.length&&!blocked.length?' 사진의 원본 범위나 출력 위치를 안전하게 확인하지 못해 여백 연결을 보류했습니다.':'')+
+  ' 상품 뒤는 복원되지 않아 상품을 옮기면 투명한 곳이 나타날 수 있습니다.';
+}
 async function resizeEditorAtomic(width,height,{preset=null}={}){
  const serial=++atomicResizeSerial;clearTimeout(sizeTimer);const state=api()?.read();
  if(!trustedEditorState(state)){tell('새 파일이나 슬라이드의 편집 요소가 준비된 뒤 규격을 선택하세요.',true);return false;}
@@ -383,19 +441,20 @@ async function resizeEditorAtomic(width,height,{preset=null}={}){
  const context=state.sceneOutputKey,previous=capture(state),base=baseFor(state),expected={epoch:state.epoch,revision:state.revision};
  const current=()=>{const s=api()?.read();return serial===atomicResizeSerial&&trustedEditorState(s)&&s.epoch===expected.epoch&&s.revision===expected.revision&&s.sceneOutputKey===context&&Number($('wInput').value)===width&&Number($('hInput').value)===height;};
  const restoreInputs=()=>{const s=api()?.read();if(serial===atomicResizeSerial&&s&&s.epoch===expected.epoch&&s.revision===expected.revision&&s.sceneOutputKey===context&&globalThis.getLayerOutputContextKey?.()===context)targetInputs(s.width,s.height);};
- let target,promise,prepared,result,plan,decoded,recovered=null,photoGeometry,photoPlan;targetInputs(width,height);
+ let target,promise,prepared,result,plan,decoded,recovered=null,photoGeometry,photoPlan,partialSelected,partialPlan,partialPrepared;targetInputs(width,height);
  const expanded=state.objects.filter(o=>o.gridExpansion),baseIsCurrent=base.width===state.width&&base.height===state.height&&base.objects.every(v=>v.object.getElement?.()===v.imageElement&&['left','top','width','height','scaleX','scaleY'].every(k=>Object.is(v.object[k],v.values[k])));
  globalThis.coexGridPreflight={baseIsCurrent,count:expanded.length,base:[base.width,base.height],scene:[state.width,state.height]};if(baseIsCurrent&&expanded.length===1){try{const under=partitionBackground(state).backgrounds.map(x=>x.object);recovered=await verifyExpandedGrid({state,object:expanded[0],permittedUnderlays:under,makeCanvas:(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;},decode:decodeCompositeTrial,isCurrent:()=>current()&&!!api()?.matchesAtomicLiveGuard?.(liveGuard)});}catch{}if(!current())return false;if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);return false;}}
  globalThis.coexGridPreflight.recovered=!!recovered;composing=true;
- try{restore(base);const before={...state,width:base.width,height:base.height};if(recovered){const o=recovered.object;if(o.getElement?.()!==recovered.oldEl||o.getSrc?.()!==recovered.oldSrc)throw Error('격자 원본이 변경되어 변환을 중지했습니다.');o.setElement(recovered.raw);o.set({...recovered.original,gridExpansion:undefined});o.set('gridSourceProvenance',createRecoveredGridSourceProvenance(before,o,recovered.frame));o.setCoords();}
-  const photoSource=selectPhotoExtension(before),reviewed=new Map(state.objects.filter(o=>validGridSourceProvenance(before,o)).map(o=>[o,{...o.gridSourceProvenance.frame}]));result=resizeBackgroundOnly(before,width,height,pictureFitOptions());photoGeometry=photoExtensionGeometry(photoSource,width,height);exposeOutsideTrial(state);plan=makeCompositeTrial(state,result,base,width,height,reviewed);
+ try{restore(base);const before={...api().read(),width:base.width,height:base.height};if(recovered){const o=recovered.object;if(o.getElement?.()!==recovered.oldEl||o.getSrc?.()!==recovered.oldSrc)throw Error('격자 원본이 변경되어 변환을 중지했습니다.');o.setElement(recovered.raw);o.set({...recovered.original,gridExpansion:undefined});o.set('gridSourceProvenance',createRecoveredGridSourceProvenance(before,o,recovered.frame));o.setCoords();}
+  const photoSource=selectPhotoExtension(before);partialSelected=photoSource?null:selectPartialPhotoExtension(before);const reviewed=new Map(before.objects.filter(o=>validGridSourceProvenance(before,o)).map(o=>[o,{...o.gridSourceProvenance.frame}]));result=resizeBackgroundOnly(before,width,height,pictureFitOptions());photoGeometry=photoExtensionGeometry(photoSource,width,height);partialPlan=planPartialPhoto(before,partialSelected,result,width,height);exposeOutsideTrial(before);plan=makeCompositeTrial(before,result,base,width,height,reviewed);
   if(recovered&&(!plan||plan.object!==recovered.object)){restore(base);result=resizeBackgroundOnly(before,width,height,pictureFitOptions());exposeOutsideTrial(state);plan=null;result.status='review';result.reason+=' 기존 격자는 원본을 유지했습니다. 새 규격의 연결을 확인하세요.';}else if(expanded.length&&!recovered&&baseIsCurrent){result.status='review';result.reason+=' 기존 격자는 원본을 유지했습니다. 새 규격의 연결을 확인하세요.';}
-  target=capture({...state,width,height});}
+  target=capture({...api().read(),width,height});}
  catch(error){restoreInputs();tell(error.message,true);return false;}finally{restore(previous);api()?.refresh();composing=false;}
  try{
   if(photoGeometry){photoPlan=await preparePhotoExtension(photoGeometry,{makeCanvas:(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;},decode:decodeCompositeTrial});if(!current())return false;if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);return false;}}
+  if(partialPlan){partialPrepared=await preparePartialPhoto(partialPlan,partialSelected,()=>current()&&!!api()?.matchesAtomicLiveGuard?.(liveGuard));if(!current())return false;}
   if(plan){decoded=await decodeCompositeTrial(plan.composite);if(!current())return false;if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);return false;}}
-  composing=true;try{restore(target);if(photoPlan?.status==='review'){if(!applyPhotoExtension(photoPlan))throw Error('사진이 바뀌어 배경 연결을 중지했습니다.');api().validateCompositeProject();result.status='review';result.reason+=' '+photoExtensionNotice(photoPlan);result.backgroundScope='사진 가장자리 반사 후보를 연결했습니다. 반복과 이음선을 확인하세요.'+(photoResidual(photoPlan.geometry.object)?' 상품 뒤는 복원되지 않았습니다.':'');target=capture({...state,width,height});}else if(state.objects.some(o=>o.visible!==false&&(o.cutoutMethod==='photo-ai-estimated-inpaint'||photoResidual(o)))&&photoPlan?.reason!=='no-new-margin'){result.status='review';result.reason+=' 사진 배경의 원본·경계 확인이 부족해 새 여백 연결을 보류했습니다.';}if(plan){if(!applyCompositeGrid(plan,decoded))throw Error('원본이 바뀌어 무늬 연결을 중지했습니다.');api().validateCompositeProject();result.status='review';result.reason+=' '+plan.warning;result.backgroundScope+=' 연결한 무늬를 확인하세요.';target=capture({...state,width,height});}promise=api().prepareAtomicSnapshot(width,height,{...expected,decision:result});}
+  composing=true;try{restore(target);if(photoPlan?.status==='review'){if(!applyPhotoExtension(photoPlan))throw Error('사진이 바뀌어 배경 연결을 중지했습니다.');api().validateCompositeProject();result.status='review';result.reason+=' '+photoExtensionNotice(photoPlan);result.backgroundScope='사진 가장자리 반사 후보를 연결했습니다. 반복과 이음선을 확인하세요.'+(photoResidual(photoPlan.geometry.object)?' 상품 뒤는 복원되지 않았습니다.':'');target=capture({...state,width,height});}else if(partialPrepared){attachPartialPhoto(partialPrepared,partialSelected,state.F);api().validateCompositeProject();result.status='review';result.reason+=' '+partialPhotoNotice(partialPrepared);result.backgroundScope=partialPrepared.patches.length?'부분 사진의 확인된 가장자리 연결 후보입니다. 결과를 확인하세요.':'부분 사진의 새 여백 연결을 보류했습니다.';result.partialPhoto={applied:partialPrepared.patches.map(x=>x.proposal.side),blocked:partialPrepared.blocked,reason:partialPrepared.reason};target=capture({...api().read(),width,height});}else if(state.objects.some(o=>o.visible!==false&&(o.cutoutMethod==='photo-ai-estimated-inpaint'||photoResidual(o)))&&photoPlan?.reason!=='no-new-margin'){result.status='review';result.reason+=' 사진 배경의 원본·경계 확인이 부족해 새 여백 연결을 보류했습니다.';}if(plan){if(!applyCompositeGrid(plan,decoded))throw Error('원본이 바뀌어 무늬 연결을 중지했습니다.');api().validateCompositeProject();result.status='review';result.reason+=' '+plan.warning;result.backgroundScope+=' 연결한 무늬를 확인하세요.';target=capture({...api().read(),width,height});}promise=api().prepareAtomicSnapshot(width,height,{...expected,decision:result});}
   finally{restore(previous);api()?.refresh();composing=false;}
   prepared=await promise;if(!current()){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);return false;}
   if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);if(current()){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);}return false;}
@@ -425,7 +484,7 @@ async function undoEditorAtomic(){
   if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);if(current()){rollbackInputs();tell('요소가 변경되었거나 이동·다중선택 중이어서 되돌리기를 중지했습니다. 선택을 해제하고 다시 시도하세요.',true);}return false;}
   composing=true;restore(target);let result;
   try{result=api().commitAtomic(w,h,expected,prepared);}catch(error){if(current()){restore(previous);api()?.refresh();rollbackInputs();tell(error.message,true);}globalThis.coexDiscardLayerSnapshotAtomic?.(prepared);return false;}finally{composing=false;}
-  invalidatePhotoExtensions();lastAutomaticDecision=decision;globalThis.coexBackgroundOnlyResult=decision;lastRevision=-1;baseline=null;undo=null;try{globalThis.coexSetPresetMetadata?.(null);$('reflowUndo').disabled=true;tell('재배치 전의 크기와 요소 배치를 복원했습니다.');outputNote.textContent='재배치 전으로 복원한 화면입니다.';}catch{}return true;
+  partialPatchManager.relinquish(api()?.read()?.objects);invalidatePhotoExtensions();lastAutomaticDecision=decision;globalThis.coexBackgroundOnlyResult=decision;lastRevision=-1;baseline=null;undo=null;try{globalThis.coexSetPresetMetadata?.(null);$('reflowUndo').disabled=true;tell('재배치 전의 크기와 요소 배치를 복원했습니다.');outputNote.textContent='재배치 전으로 복원한 화면입니다.';}catch{}return true;
  }catch(error){if(current()){rollbackInputs();tell(error.message,true);}return false;}
 }
 $('reflowUndo').onclick=()=>undoEditorAtomic();
@@ -484,20 +543,21 @@ globalThis.encodeTarget=async function(source,p,settings){
  const current=()=>{const live=api()?.read(),info=globalThis.getLayerAnalysisSource?.();return $('fitWholePictures').checked===fitWholePictures&&!!live&&live.epoch===state.epoch&&live.revision===state.revision&&live.sceneOutputKey===state.sceneOutputKey&&sceneMatchesSource(live,info)&&!!globalThis.isLayerOutputSource?.(origin)&&!!api()?.matchesAtomicLiveGuard?.(guard);};
  const outsideCurrent=await preloadOutsideTrial(state,current);
  if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
- const original=capture(state),base=baseFor(state),diagnostics={plan:globalThis.coexLastLayoutPlan,candidates:globalThis.coexLayoutCandidates,failure:globalThis.coexLayoutFailure};let image,decision,photoGeometry,photoPlan;
+ const original=capture(state),base=baseFor(state),diagnostics={plan:globalThis.coexLastLayoutPlan,candidates:globalThis.coexLayoutCandidates,failure:globalThis.coexLayoutFailure};let image,decision,photoGeometry,photoPlan,partialSelected,partialPlan,partialPrepared,temporaryPatches=[];
  try{
   // Determine geometry while the source is staged, then restore before awaiting.
-  {const wasComposing=composing;composing=true;try{restore(base);const sourceState={...state,width:base.width,height:base.height},photoSource=selectPhotoExtension(sourceState);if(photoSource){resizeBackgroundOnly(sourceState,p.w,p.h,{includeWholePictures:fitWholePictures});photoGeometry=photoExtensionGeometry(photoSource,p.w,p.h);}}finally{restore(original);api().refresh();composing=wasComposing;}}
+  {const wasComposing=composing;composing=true;try{restore(base);const sourceState={...api().read(),width:base.width,height:base.height},photoSource=selectPhotoExtension(sourceState);partialSelected=photoSource?null:selectPartialPhotoExtension(sourceState);if(photoSource||partialSelected){const r=resizeBackgroundOnly(sourceState,p.w,p.h,{includeWholePictures:fitWholePictures});photoGeometry=photoExtensionGeometry(photoSource,p.w,p.h);partialPlan=planPartialPhoto(sourceState,partialSelected,r,p.w,p.h);}}finally{restore(original);api().refresh();composing=wasComposing;}}
   if(photoGeometry){photoPlan=await preparePhotoExtension(photoGeometry,{makeCanvas:(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;},decode:decodeCompositeTrial});if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');}
+  if(partialPlan){partialPrepared=await preparePartialPhoto(partialPlan,partialSelected,()=>current()&&outsideCurrent());if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');}
   // No await while the live scene temporarily has target geometry.
   const wasComposing=composing;composing=true;
-  try{restore(base);const sourceState={...state,width:base.width,height:base.height};decision=resizeBackgroundOnly(sourceState,p.w,p.h,{includeWholePictures:fitWholePictures});if(photoPlan?.status==='review'){if(!applyPhotoExtension(photoPlan))throw Error('사진이 바뀌어 일괄 변환을 중단했습니다.');decision.status='review';decision.reason+=' '+photoExtensionNotice(photoPlan);decision.backgroundScope='사진 가장자리 반사 후보를 연결했습니다. 반복과 이음선을 확인하세요.'+(photoResidual(photoPlan.geometry.object)?' 상품 뒤는 복원되지 않았습니다.':'');}else if(state.objects.some(o=>o.visible!==false&&(o.cutoutMethod==='photo-ai-estimated-inpaint'||photoResidual(o)))&&photoPlan?.reason!=='no-new-margin'){decision.status='review';decision.reason+=' 사진 배경의 원본·경계 확인이 부족해 새 여백 연결을 보류했습니다.';}exposeOutsideTrial(state);image=api().snapshot(p.w,p.h);policy.record(image,decision);}
+  try{restore(base);const sourceState={...api().read(),width:base.width,height:base.height};decision=resizeBackgroundOnly(sourceState,p.w,p.h,{includeWholePictures:fitWholePictures});if(photoPlan?.status==='review'){if(!applyPhotoExtension(photoPlan))throw Error('사진이 바뀌어 일괄 변환을 중단했습니다.');decision.status='review';decision.reason+=' '+photoExtensionNotice(photoPlan);decision.backgroundScope='사진 가장자리 반사 후보를 연결했습니다. 반복과 이음선을 확인하세요.'+(photoResidual(photoPlan.geometry.object)?' 상품 뒤는 복원되지 않았습니다.':'');}else if(partialPrepared){temporaryPatches=attachPartialPhoto(partialPrepared,partialSelected,state.F);decision.status='review';decision.reason+=' '+partialPhotoNotice(partialPrepared);decision.backgroundScope=partialPrepared.patches.length?'부분 사진의 확인된 가장자리 연결 후보입니다. 결과를 확인하세요.':'부분 사진의 새 여백 연결을 보류했습니다.';decision.partialPhoto={applied:partialPrepared.patches.map(x=>x.proposal.side),blocked:partialPrepared.blocked,reason:partialPrepared.reason};}else if(sourceState.objects.some(o=>o.visible!==false&&(o.cutoutMethod==='photo-ai-estimated-inpaint'||photoResidual(o)))&&photoPlan?.reason!=='no-new-margin'){decision.status='review';decision.reason+=' 사진 배경의 원본·경계 확인이 부족해 새 여백 연결을 보류했습니다.';}exposeOutsideTrial(sourceState);image=api().snapshot(p.w,p.h);policy.record(image,decision);}
   finally{try{restore(original);api().refresh();globalThis.coexLastLayoutPlan=diagnostics.plan;globalThis.coexLayoutCandidates=diagnostics.candidates;globalThis.coexLayoutFailure=diagnostics.failure;}finally{composing=wasComposing;}}
   if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
   const blob=await originalEncode(image,p,{...settings,mode:'auto'});
   if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
   policy.record(blob,decision);return blob;
- }finally{if(image)image.width=image.height=0;}
+ }finally{partialPatchManager.relinquish(temporaryPatches);temporaryPatches.forEach(o=>o.dispose?.());if(image)image.width=image.height=0;}
 };
 $('layerPreset').onchange=()=>{if(!$('layerPreset').value)return;const [w,h]=$('layerPreset').value.split('x').map(Number);$('reflowRatio').value='';void resizeEditorAtomic(w,h);};
 let separationKey='',separationAttemptKey='',separationAttempts=0,separationRetryAt=0,separationBusy=false,separationPendingKey='',separationQuietAt=0;

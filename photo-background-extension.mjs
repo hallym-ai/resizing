@@ -31,16 +31,18 @@ export async function extendPhotoBackground({pixels,width,height,foregroundMask=
  // Only sample a limited edge strip. Any source subject/mask contact or alpha
  // hole in a strip rejects the whole candidate instead of cloning the object.
  const band=Math.max(2,Math.min(32,Math.floor(Math.min(width,height)/8)));
+ let transparentEdge=false;
  for(let y=0;y<height;y++){
   if(signal?.aborted)return {status:'cancelled',reason:'cancelled'};
   if((y&127)===0)await new Promise(resolve=>setTimeout(resolve,0));
   for(let x=0;x<width;x++){
    if(!((left&&x<band)||(right&&x>=width-band)||(top&&y<band)||(bottom&&y>=height-band)))continue;
    const i=y*width+x;
-   if(pixels[4*i+3]!==255)return reject('transparent-edge');
    if(foregroundMask?.[i])return reject('foreground-touches-edge');
+   if(pixels[4*i+3]!==255)transparentEdge=true;
   }
  }
+ if(transparentEdge)return reject('transparent-edge');
  if(signal?.aborted)return {status:'cancelled',reason:'cancelled'};
  const output=new Uint8ClampedArray(targetWidth*targetHeight*4);
  // Mirror within the edge strip, not the entire original image. This avoids

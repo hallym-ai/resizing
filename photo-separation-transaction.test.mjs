@@ -16,4 +16,7 @@ assert.deepEqual(q.canvas.objects,[q.below,q.o,parts[0],parts[1],q.above],'sourc
 for(const p of parts)for(const k of ['originX','originY','left','top','scaleX','scaleY','angle','opacity'])assert.equal(p[k],q.o[k],k);
 assert.equal(parts[0].layerRole,'other');assert.equal(parts[0].photoInstanceKind,'background');assert.equal(parts[1].photoInstanceKind,'part');
 for(const reason of ['validation','prepare','stale','commit']){q=fixture(reason);await assert.rejects(run(q));assert.deepEqual(q.canvas.objects,[q.below,q.o,q.above],reason);assert.equal(q.o.visible,true);assert.equal(q.o.layerLocked,false);assert(!Object.hasOwn(q.o,'photoInstanceGroup'));assert.equal(q.commits,0);}
+for(const key of ['outsideRecovery','trialOutsideRestore','__outsideRenderInstalled','__outsideTrialVisible','outsideRecoveryReview','_render']){
+ q=fixture();q.o[key]=key==='_render'?()=>{}:{};await assert.rejects(run(q),/바깥 영역/);assert.deepEqual(q.canvas.objects,[q.below,q.o,q.above],key);assert.equal(q.commits,0);
+}
 console.log('pass: atomic preparation, stale guard, failure rollback, geometry and paint order');

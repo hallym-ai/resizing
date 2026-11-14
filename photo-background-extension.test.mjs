@@ -36,6 +36,8 @@ const edgeMask=mask.slice();edgeMask[10*width]=1;
 assert.equal((await extendPhotoBackground({...caseBase,foregroundMask:edgeMask})).reason,'foreground-touches-edge');
 const translucent=pixels.slice();translucent[(10*width)*4+3]=254;
 assert.equal((await extendPhotoBackground({...caseBase,pixels:translucent})).reason,'transparent-edge');
+const mixedMask=mask.slice(),mixedPixels=pixels.slice();mixedPixels[3]=0;mixedMask[20*width]=255;
+assert.equal((await extendPhotoBackground({...caseBase,pixels:mixedPixels,foregroundMask:mixedMask})).reason,'foreground-touches-edge','later foreground takes priority over earlier transparency');
 const separated=await extendPhotoBackground({...caseBase,pixels:new Uint8ClampedArray(width*height*4).fill(255),foregroundMask:null,evidence:{kind:'separated-background',confirmed:true}});
 assert.equal(separated.status,'review','isolated background may be used with in-session confirmation');
 const controller=new AbortController();controller.abort();assert.equal((await extendPhotoBackground({...caseBase,signal:controller.signal})).status,'cancelled');

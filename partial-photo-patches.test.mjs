@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {createPartialPatchManager} from './partial-photo-patches.mjs';
+const m=createPartialPatchManager(),a={},b={},c={},patch=m.mark({}),newPatch=m.mark({});
+const canvas={objects:[a,patch,b,c],getObjects(){return this.objects},remove(o){this.objects.splice(this.objects.indexOf(o),1)},insertAt(i,o){this.objects.splice(i,0,o)},moveObjectTo(o,i){this.remove(o);this.objects.splice(i,0,o)}};
+assert(m.sameMembers([a,b,c],canvas.objects));m.reconcile(canvas,[a,b,c]);assert.deepEqual(canvas.objects,[a,b,c]);
+m.reconcile(canvas,[a,newPatch,b,c]);assert.deepEqual(canvas.objects,[a,newPatch,b,c]);
+m.reconcile(canvas,[a,patch,b,c]);assert.deepEqual(canvas.objects,[a,patch,b,c]);
+const userObject={};canvas.objects.push(userObject);assert.throws(()=>m.reconcile(canvas,[a,b,c]));assert(canvas.objects.includes(userObject),'unrelated edit never discarded');
+canvas.objects.pop();m.relinquish([patch]);assert(!m.isManaged(patch));assert.throws(()=>m.reconcile(canvas,[a,b,c]));
+let objects=[];const owner={remove(o){objects.splice(objects.indexOf(o),1)}};const stable=m.mark({canvas:owner,left:1,layerLocked:true}),edited=m.mark({canvas:owner,left:1,layerLocked:true});objects=[stable,edited];edited.left=2;
+const revoked=m.revokeAfterEdit(objects);assert.equal(revoked.removed,1);assert.equal(revoked.preserved,1);assert.deepEqual(objects,[edited],'edited patch is not deleted');assert(!m.isManaged(edited));
+console.log('pass: patch-only scene restoration, repeated targets and user-object safety');

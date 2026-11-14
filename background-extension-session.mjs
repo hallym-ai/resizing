@@ -1,5 +1,6 @@
 import {extendPhotoBackground} from './photo-background-extension.mjs';
 import {solidBackgroundColor} from './solid-background.mjs';
+import {authorizePhotoCompositeExtension} from './photo-composite-render.mjs';
 
 // Trust is deliberately local to this page and to a specific Fabric object.
 // Saved project metadata is never used to authorize a new extension.
@@ -41,6 +42,30 @@ export function selectPhotoExtension(state){
   box.top+box.height<state.height-0.5||box.top+box.height>state.height+ty)return null;
  return {object,record};
 }
+// Unlike the full-slide path, a partial picture may expand only inside its
+// own source band. Trust is still the live session record created after the
+// user reviewed this exact foreground mask; saved JSON grants no authority.
+export function selectPartialPhotoExtension(state){
+ const objects=state?.objects||[],candidates=objects.filter(o=>o.visible!==false&&records.has(o));
+ if(candidates.length!==1)return null;
+ const object=candidates[0],record=records.get(object),index=objects.indexOf(object),group=record.group;
+ const source=objects[index-1],part=objects[index+1];
+ if(record.generation!==generation||!group||object.photoInstanceGroup!==group||object.getElement?.()!==record.element||
+  object.width!==record.width||object.height!==record.height||object.layerRole!=='other'||object.photoInstanceKind!=='background'||
+  !eligibleMethod(object.cutoutMethod)||object.cutoutMethod!==record.method||object.angle||object.skewX||object.skewY||object.flipX||object.flipY||
+  object.cropX||object.cropY||object.clipPath||object.shadow||object.group||object.filters?.length||(object.opacity??1)!==1||object.strokeWidth||
+  !(object.scaleX>0&&object.scaleY>0)||source?.photoInstanceGroup!==group||source.photoInstanceKind!=='source'||source.visible!==false||
+  part?.photoInstanceGroup!==group||part.photoInstanceKind!=='part'||part.visible===false||
+  objects.filter(o=>o.photoInstanceGroup===group&&o.photoInstanceKind==='background'&&o.visible!==false).length!==1)return null;
+ const box=object.getBoundingRect?.();if(!box||![box.left,box.top,box.width,box.height].every(Number.isFinite))return null;
+ return {object,source,part,record,sourceBox:{x:box.left,y:box.top,width:box.width,height:box.height},sourceIndex:index-1};
+}
+export function isPartialPhotoCurrent(selected){
+ const {object,source,part,record}=selected||{};
+ return !!object&&records.get(object)===record&&record.generation===generation&&object.getElement?.()===record.element&&
+  object.photoInstanceGroup===record.group&&source?.photoInstanceGroup===record.group&&part?.photoInstanceGroup===record.group;
+}
+export function isPartialPhotoBase(layer,state){return !!layer&&confirmedFullSolid(layer.object,state);}
 export function photoExtensionGeometry(selected,targetWidth,targetHeight){
  if(!selected)return null;
  const {object,record}=selected,box=object.getBoundingRect();if(!box)return null;
@@ -66,5 +91,6 @@ export function applyPhotoExtension(plan){
  const g=plan.geometry,o=g.object;
  if(o.getElement?.()!==g.record.element||o.width!==g.record.width||o.height!==g.record.height)return false;
  const b=o.getBoundingRect();if(['left','top','width','height'].some(k=>Math.abs(b[k]-g.box[k])>0.01))return false;
- o.setElement(plan.element);o.set({originX:'left',originY:'top',left:g.box.left-g.x*g.sx,top:g.box.top-g.y*g.sy,width:g.width,height:g.height,scaleX:g.sx,scaleY:g.sy});o.setCoords();return true;
+ o.setElement(plan.element);o.set({originX:'left',originY:'top',left:g.box.left-g.x*g.sx,top:g.box.top-g.y*g.sy,width:g.width,height:g.height,scaleX:g.sx,scaleY:g.sy});o.setCoords();
+ authorizePhotoCompositeExtension({background:o,originalElement:g.record.element,element:plan.element,x:g.x,y:g.y,width:g.width,height:g.height});return true;
 }

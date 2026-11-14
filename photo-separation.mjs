@@ -3,17 +3,20 @@ import {removePhotoBackground} from './photo-ai.mjs';
 import {splitPhotoPixels} from './photo-separation-mask.mjs';
 import {applyPhotoSeparation} from './photo-separation-transaction.mjs';
 import {estimateHiddenBackground} from './photo-background-inpaint.mjs';
+import {installPhotoCompositeRecovery} from './photo-composite-recovery.mjs';
+import {unsafePhotoSourceRenderer} from './photo-composite-render.mjs';
 
 // Explicit, local-only inference on one selected picture. A proposal never
 // changes the source until the user applies it and the scene guard still holds.
 const by=id=>document.getElementById(id),api=()=>globalThis.coexLayerLayout;
+installPhotoCompositeRecovery(api);
 const panel=document.createElement('details');panel.id='photoSeparationPanel';
 panel.innerHTML=`<summary>실사 사진 속 상품과 배경 분리</summary><p class="layer-help">사진 레이어 하나를 선택하고 분리 결과를 확인하세요. 사진은 이 브라우저에서 처리하며 최초 실행 시 사진 모델을 준비합니다. 가는 경계는 거칠 수 있으니 전경과 배경을 먼저 확인하세요.</p><div class="layer-tools"><button id="photoSeparationStart" type="button" class="doc-btn">선택한 사진 분리</button><button id="photoSeparationCancel" type="button" class="doc-btn" hidden>분리 중지</button></div><p id="photoSeparationStatus" role="status" aria-live="polite">사진 요소를 선택하세요.</p><div id="photoSeparationPreviews" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px" hidden><figure style="margin:0"><figcaption>상품·전경 추정</figcaption><img id="photoSeparationForeground" alt="상품·전경 분리 후보" style="width:100%;height:150px;object-fit:contain;background:repeating-conic-gradient(#ddd 0 25%,#fff 0 50%) 0/16px 16px"></figure><figure style="margin:0"><figcaption>남은 배경 · 가려진 곳은 투명</figcaption><img id="photoSeparationBackground" alt="상품 뒤가 비어 있는 배경 후보" style="width:100%;height:150px;object-fit:contain;background:repeating-conic-gradient(#ddd 0 25%,#fff 0 50%) 0/16px 16px"></figure></div><button id="photoSeparationRepair" type="button" class="doc-btn" hidden>확인한 상품 뒤의 배경 후보 만들기</button><figure id="photoSeparationRepairFigure" style="margin:0" hidden><figcaption>주변색으로 추정한 배경 · 실제 원본 복원 아님</figcaption><img id="photoSeparationRepairPreview" alt="가려진 부분을 주변색으로 추정한 배경 후보" style="width:100%;height:150px;object-fit:contain;background:repeating-conic-gradient(#ddd 0 25%,#fff 0 50%) 0/16px 16px"></figure><label id="photoSeparationRepairChoice" class="layer-help" hidden><input id="photoSeparationUseRepair" type="checkbox"> 확인한 추정 배경을 함께 적용</label><button id="photoSeparationApply" type="button" class="doc-btn" hidden>확인 후 각각의 레이어로 적용</button><button id="photoSeparationDiscard" type="button" class="doc-btn" hidden>후보 닫기</button>`;
 by('photoMaskPanel').after(panel);
 let ticket=0,pending=null,controller=null;
 const say=message=>{by('photoSeparationStatus').textContent=message;};
 function selected(){const state=api()?.read(),canvas=state?.objects.find(o=>o.canvas)?.canvas,o=canvas?.getActiveObject();return {state,canvas,o};}
-function allowed(o){return !!o&&String(o.type).toLowerCase()==='image'&&o.visible!==false&&!o.layerLocked&&!o.photoInstanceGroup&&!o.originalPhotoSource&&!o.group&&!o.clipPath&&!o.shadow&&!o.filters?.length&&!o.cropX&&!o.cropY&&!o.sourceText&&!o.sourceImageFill&&(!o.globalCompositeOperation||o.globalCompositeOperation==='source-over')&&!(o.stroke&&o.strokeWidth);}
+function allowed(o){return !!o&&!unsafePhotoSourceRenderer(o)&&String(o.type).toLowerCase()==='image'&&o.visible!==false&&!o.layerLocked&&!o.photoInstanceGroup&&!o.originalPhotoSource&&!o.group&&!o.clipPath&&!o.shadow&&!o.filters?.length&&!o.cropX&&!o.cropY&&!o.sourceText&&!o.sourceImageFill&&(!o.globalCompositeOperation||o.globalCompositeOperation==='source-over')&&!(o.stroke&&o.strokeWidth);}
 function clear(){ticket++;controller?.abort();controller=null;pending=null;by('photoSeparationCancel').hidden=true;by('photoSeparationStart').disabled=false;by('photoSeparationApply').hidden=true;by('photoSeparationDiscard').hidden=true;by('photoSeparationRepair').hidden=true;by('photoSeparationRepair').disabled=false;by('photoSeparationRepairFigure').hidden=true;by('photoSeparationRepairChoice').hidden=true;by('photoSeparationUseRepair').checked=false;by('photoSeparationRepairPreview').removeAttribute('src');by('photoSeparationPreviews').hidden=true;by('photoSeparationForeground').removeAttribute('src');by('photoSeparationBackground').removeAttribute('src');}
 function current(p){const {state,canvas,o}=selected();return !!state&&canvas===p.canvas&&o===p.object&&state.epoch===p.epoch&&state.revision===p.revision&&api()?.matchesAtomicLiveGuard?.(p.guard)&&o.getElement?.()===p.element&&o.getSrc?.()===p.source;}
 function makeCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
@@ -21,7 +24,7 @@ function encodePixels(pixels,w,h){const c=makeCanvas(w,h);try{const ctx=c.getCon
 async function decode(src){const image=new Image();image.src=src;await image.decode();return image;}
 by('photoSeparationStart').onclick=async()=>{
  clear();panel.open=true;const {state,canvas,o}=selected();
- if(!state||!allowed(o)){say('잠금이 해제된 사진 요소 한 개를 선택하세요. 이미 분리한 사진은 먼저 원본으로 복원하세요.');return;}
+ if(!state||!allowed(o)){say(unsafePhotoSourceRenderer(o)?'바깥 영역이 복원된 사진은 원본 보존을 위해 자동 분리를 보류합니다.':'잠금이 해제된 사진 요소 한 개를 선택하세요. 이미 분리한 사진은 먼저 원본으로 복원하세요.');return;}
  const el=o.getElement?.(),w=el?.naturalWidth||el?.width,h=el?.naturalHeight||el?.height;
  if(!Number.isSafeInteger(w)||!Number.isSafeInteger(h)||w<1||h<1||w*h>4000000||o.width!==w||o.height!==h){say('원본 사진의 크기나 자르기 상태를 확인하세요. 사진은 400만 픽셀 이하에서 분리할 수 있습니다.');return;}
  const guard=api()?.captureAtomicLiveGuard?.();if(!guard){say('사진 이동이나 편집을 마친 뒤 다시 시도하세요.');return;}

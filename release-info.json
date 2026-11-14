@@ -1,5 +1,5 @@
 {
-  "release": "photo-background-20261114",
+  "release": "photo-background-20261115",
   "features": [
     "yoga",
     "workspace-controls",
@@ -36,6 +36,8 @@
     "preserve-foreground-relative-position",
     "local-photo-separation-review",
     "photo-residual-shared-transform",
-    "reviewed-photo-edge-extension"
+    "reviewed-photo-edge-extension",
+    "aligned-photo-composite",
+    "reviewed-partial-photo-extension"
   ]
 }
