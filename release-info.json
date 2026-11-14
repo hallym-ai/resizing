@@ -1,5 +1,5 @@
 {
-  "release": "photo-background-20261115",
+  "release": "independent-cover-20261115-v2",
   "features": [
     "yoga",
     "workspace-controls",
@@ -38,6 +38,7 @@
     "photo-residual-shared-transform",
     "reviewed-photo-edge-extension",
     "aligned-photo-composite",
-    "reviewed-partial-photo-extension"
+    "reviewed-partial-photo-extension",
+    "confirmed-independent-background-cover-review"
   ]
 }
