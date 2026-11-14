@@ -47,6 +47,9 @@ for(const [tw,th] of [[1080,1080],[1920,1080],[1080,1920],[1080,1350],[1379,611]
  for(const obj of [ref,candidate])Object.assign(obj,{left:0,top:0,scaleX:1,scaleY:1});Object.assign(plate,{left:0,top:0,width:100,height:100,scaleX:1,scaleY:1});
  const original=resizeBackgroundOnly(scene,tw,th,{includeWholePictures:false});
  assert(Math.abs(original.foregroundScale-Math.min(tw/100,th/100))<1e-8,'original frame mode stays unchanged');
+ for(const obj of [ref,candidate])Object.assign(obj,{left:0,top:0,scaleX:1,scaleY:1});Object.assign(plate,{left:0,top:0,width:100,height:100,scaleX:1,scaleY:1});
+ const byDefault=resizeBackgroundOnly(scene,tw,th);
+ assert(Math.abs(byDefault.foregroundScale-Math.min(tw/130,th/100))<1e-8,'default includes trusted outside patch bounds');
 }
 canvas.objects=[ref,candidate];
 candidate._render(ctx);canvas._renderOverlay(ctx);assert.equal(patchDraws,1,'trusted canvas overlay retains outside patch');assert.equal(candidate.__outsideReview,false);

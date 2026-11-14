@@ -82,7 +82,7 @@ export function gridVisibleFitBox(o,b,state){
 export function trustedOutsideFitBoxes(boxes,objects,isTrusted=hasTrustedOutsideCandidate){
  return boxes.filter(box=>{const matches=objects.filter(o=>o.visible!==false&&o.sourceElementId===box.id);return matches.length===1&&isTrusted(matches[0]);});
 }
-export function resizeBackgroundOnly(state,width,height,{includeWholePictures=false}={}){
+export function resizeBackgroundOnly(state,width,height,{includeWholePictures=true}={}){
  installTextureBackgroundRenderer(state.F);
  if(state.fontError)throw Error(state.fontError);
  const __partialReview=partialConnectionReview(state);
