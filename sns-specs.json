@@ -161,6 +161,11 @@
       "name": "담당자 전달 제작 규격",
       "status": "user-provided",
       "note": "2026-10-27 사용자가 전달한 이번 작업의 제작 기준입니다. 플랫폼 전체의 공식 규격으로 표시하지 않습니다. 뉴스레터·블로그·홈페이지 배너는 고정 규격 없이 자유 크기로 제작합니다."
+    },
+    "userRequest20261115": {
+      "name": "사용자 지정 제작 규격",
+      "status": "user-provided",
+      "note": "2026-11-15 사용자가 지정한 작업 규격입니다."
     }
   },
   "presets": [
@@ -226,6 +231,20 @@
       "source": "contactBrief",
       "checkedAt": "2026-10-27",
       "note": "담당자 전달 기준. 이번 작업의 납품 규격입니다."
+    },
+    {
+      "id": "brief-kakao-thumbnail-box",
+      "platform": "담당자 규격",
+      "name": {
+        "ko": "카카오 썸네일 박스형",
+        "en": "Kakao thumbnail box"
+      },
+      "w": 630,
+      "h": 372,
+      "basis": "brief",
+      "source": "userRequest20261115",
+      "checkedAt": "2026-11-15",
+      "note": "사용자가 지정한 작업 규격입니다."
     },
     {
       "id": "ig-square",

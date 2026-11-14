@@ -1,5 +1,5 @@
 {
-  "release": "independent-cover-20261115-v2",
+  "release": "kakao-thumbnail-box-20261115",
   "features": [
     "yoga",
     "workspace-controls",
@@ -39,6 +39,7 @@
     "reviewed-photo-edge-extension",
     "aligned-photo-composite",
     "reviewed-partial-photo-extension",
-    "confirmed-independent-background-cover-review"
+    "confirmed-independent-background-cover-review",
+    "kakao-thumbnail-box-630x372"
   ]
 }
