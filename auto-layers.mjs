@@ -89,12 +89,18 @@ async function analyze(source){
  const timeout=setTimeout(()=>{if(current(token,source)){cancelJob();status('인식 시간이 초과되었습니다. 원본 이미지 리사이징은 계속 사용할 수 있습니다.',true);}},120000);
  try{
   if(source.nativeError)throw Error(source.nativeError+' 원본 리사이징은 사용할 수 있습니다. PPTX를 이미지 OCR로 임의 분리하지 않았습니다.');
+  // A PPTX must never fall through to raster estimation if its original-object project is unavailable.
+  if(source.sourceFormat==='pptx'&&!source.nativeProject)throw Error('PPTX 원본 요소를 불러오지 못해 이미지 추정 분리를 시작하지 않았습니다. PPTX 파일을 다시 열어 주세요.');
   if(source.nativeProject){
    status('PPTX 원래 글자·그림 객체를 레이어로 여는 중…');check(token,source);
    const doc={...source.nativeProject,inputKind:'layered',sourceFormat:'pptx'},blob=new Blob([JSON.stringify(doc)],{type:'application/json'});if(blob.size>48*1024*1024)throw Error('PPTX 레이어가 너무 큽니다.');
    importAbort=new AbortController();const loaded=await globalThis.layerFileImport(new File([blob],source.name+'.json',{type:'application/json'}),{origin:'auto',sourceKey:source.key,signal:importAbort.signal,beforeCommit:()=>current(token,source)});check(token,source);
    if(!loaded)throw Error('PPTX 객체 레이어를 열지 못했습니다.');
-   status(`PPTX 원본 객체 ${doc.analysis.objectCount}개 · 독립 글자 ${doc.analysis.textCount}개를 열었습니다. OCR로 그림과 글자를 다시 자르지 않았습니다. ${doc.analysis.warnings.join(' ')}`);
+   const nativeObjects=doc.scene?.objects||[];
+   const editableText=nativeObjects.filter(o=>['Textbox','IText','Text'].includes(o.type)&&o.sourceText?.trim()).length;
+   const textImages=nativeObjects.filter(o=>o.sourceText?.trim()&&!['Textbox','IText','Text'].includes(o.type)).length;
+   const pictures=nativeObjects.filter(o=>o.sourceElementType==='picture').length;
+   status(`PPTX 원본을 열었습니다. 편집 글자 ${editableText}개 · 개별 그림 ${pictures}개 (원본 PNG 직접 연결 ${doc.analysis.directPictureCount||0}개)${textImages?' · 이미지로 보존된 글자 '+textImages+'개':''}. OCR로 다시 자르지 않았습니다. ${doc.analysis.warnings.join(' ')}`);
    globalThis.prepareInitialNativeFrame?.();
    globalThis.scheduleRender?.();
    panel.dataset.completedKey=source.key;panel.dataset.durationMs=String(Math.round(performance.now()-started));panel.dataset.sourceEngine='pptx-original-objects';return;
