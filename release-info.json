@@ -1,5 +1,5 @@
 {
-  "release": "background-first-20261114",
+  "release": "whole-picture-20261114",
   "features": [
     "yoga",
     "workspace-controls",
@@ -26,6 +26,9 @@
     "explicit-partial-background-evidence",
     "source-background-first",
     "transparent-elements-export",
-    "source-object-coverage"
+    "source-object-coverage",
+    "verified-whole-picture-import",
+    "off-slide-source-pictures",
+    "single-pass-picture-opacity"
   ]
 }

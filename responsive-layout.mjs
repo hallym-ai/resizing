@@ -27,7 +27,7 @@ import {inspectLayout,solverInfo} from './design-layout.mjs';
 import {extendSolidBackground} from './solid-background.mjs';
 const $=id=>document.getElementById(id);
 const controls=document.createElement('section');controls.className='reflow-controls';controls.id='reflowControls';
-controls.innerHTML=`<h3>1단계 · 배경과 전체 요소 분리</h3><p>배경만 있는 화면과 배경을 뺀 전체 요소를 먼저 확인하세요. 이 단계에서는 원본 객체의 위치·크기·겹침을 유지합니다. 규격 변경은 분리 결과를 확인한 뒤 진행하세요.</p><div class="reflow-row"><label>출력 규격<select id="reflowRatio"><option value="">자유 크기 · 너비/높이 입력</option><option value="1080x1080">정사각형 · 1080 × 1080</option><option value="1920x1080">가로 · 1920 × 1080</option><option value="1080x1920">세로 · 1080 × 1920</option><option value="1800x600">가로 배너 · 1800 × 600</option></select></label><button class="doc-btn" id="reflowApply">배경만 크기 적용</button><button class="doc-btn" id="reflowUndo" disabled>크기 변경 전으로</button><button id="reflowNext" hidden disabled>다른 배치 적용</button></div><p id="reflowStatus" role="status" aria-live="polite">파일을 넣으면 배경과 보호 요소를 구분합니다.</p><details id="backgroundSeparationDetails" open><summary>배경과 전체 요소 · 분리 결과</summary><p id="backgroundSeparationStatus" role="status"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><figure style="margin:0"><figcaption>배경만</figcaption><img id="backgroundOnlyPreview" alt="다른 요소를 제외한 배경" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure><figure style="margin:0"><figcaption>배경을 뺀 전체 요소 · 투명 바탕</figcaption><img id="foregroundOnlyPreview" alt="배경과 구분된 보호 요소" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure></div><div class="reflow-row"><button type="button" class="doc-btn" id="saveSeparatedBackground" disabled>배경 PNG 저장</button><button type="button" class="doc-btn" id="saveSeparatedElements" disabled>전체 요소 PNG 저장</button></div><p>먼저 원본 슬라이드 배경과 그 위의 전체 요소를 나눕니다. 위치·크기·겹침은 유지하며, 글씨와 그림의 세부 인식은 다음 단계입니다. 그림 안에 합쳐진 배경까지 지운 결과는 아닙니다.</p></details><details><summary>자유 비율 입력</summary><div class="reflow-custom"><label>가로 비율<input id="reflowCustomX" type="number" min="1" max="10000" value="16"></label><span>:</span><label>세로 비율<input id="reflowCustomY" type="number" min="1" max="10000" value="9"></label><button id="reflowCustomApply" class="doc-btn">이 비율로 배경 변경</button></div></details>`;
+controls.innerHTML=`<h3>1단계 · 배경과 전체 요소 분리</h3><p>배경만 있는 화면과 배경을 뺀 전체 요소를 먼저 확인하세요. 이 단계에서는 원본 객체의 위치·크기·겹침을 유지합니다. 규격 변경은 분리 결과를 확인한 뒤 진행하세요.</p><div class="reflow-row"><label>출력 규격<select id="reflowRatio"><option value="">자유 크기 · 너비/높이 입력</option><option value="1080x1080">정사각형 · 1080 × 1080</option><option value="1920x1080">가로 · 1920 × 1080</option><option value="1080x1920">세로 · 1080 × 1920</option><option value="1800x600">가로 배너 · 1800 × 600</option></select></label><button class="doc-btn" id="reflowApply">배경만 크기 적용</button><button class="doc-btn" id="reflowUndo" disabled>크기 변경 전으로</button><button id="reflowNext" hidden disabled>다른 배치 적용</button></div><p id="reflowStatus" role="status" aria-live="polite">파일을 넣으면 배경과 보호 요소를 구분합니다.</p><label class="layer-help"><input type="checkbox" id="fitWholePictures"> 규격 변경 시 원본 그림의 전체 범위까지 맞춤</label><p class="layer-help">켜면 바깥으로 뻗은 별·선까지 포함해 전체 디자인을 같은 비율로 맞춥니다. 전체 디자인이 더 작아질 수 있습니다. 끄면 원본 프레임 기준을 유지하며, 새 여백이 없는 방향은 잘릴 수 있습니다.</p><details id="backgroundSeparationDetails" open><summary>배경과 전체 요소 · 분리 결과</summary><p id="backgroundSeparationStatus" role="status"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><figure style="margin:0"><figcaption>배경만</figcaption><img id="backgroundOnlyPreview" alt="다른 요소를 제외한 배경" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure><figure style="margin:0"><figcaption>배경을 뺀 전체 요소 · 투명 바탕</figcaption><img id="foregroundOnlyPreview" alt="배경과 구분된 보호 요소" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure></div><div class="reflow-row"><button type="button" class="doc-btn" id="saveSeparatedBackground" disabled>배경 PNG 저장</button><button type="button" class="doc-btn" id="saveSeparatedElements" disabled>전체 요소 PNG 저장</button></div><p>먼저 원본 슬라이드 배경과 그 위의 전체 요소를 나눕니다. 위치·크기·겹침은 유지하며, 글씨와 그림의 세부 인식은 다음 단계입니다. 그림 안에 합쳐진 배경까지 지운 결과는 아닙니다.</p></details><details><summary>자유 비율 입력</summary><div class="reflow-custom"><label>가로 비율<input id="reflowCustomX" type="number" min="1" max="10000" value="16"></label><span>:</span><label>세로 비율<input id="reflowCustomY" type="number" min="1" max="10000" value="9"></label><button id="reflowCustomApply" class="doc-btn">이 비율로 배경 변경</button></div></details>`;
 $('layerFields').prepend(controls);
 mountOutsideStatus($('reflowStatus'),()=>globalThis.coexGetOutsideRecoveryReport?.()||null,()=>globalThis.coexLayerLayout?.read());
 // Output dimensions have one visible owner. Legacy nodes stay for compatibility.
@@ -49,6 +49,7 @@ let baseline=null,undo=null,lastRevision=-1,queued=null,composing=false,sizeTime
 const attrs=['partialSolidProvenance','nativeBitmapProvenance','gridSourceUserEdited','gridSourceProvenance','gridExpansion','__outsideTrialVisible','objectCaching','textureBackgroundFrame','left','top','scaleX','scaleY','angle','originX','originY','flipX','flipY','width','height','fontSize','textAlign','textBackgroundColor','readabilityPanelBox','layerRole','styles','splitByGrapheme','lineHeight','direction','radius','strokeWidth','rx','ry','visible','layoutOverlapBasis','layoutGraphSource'];
 const tell=(text,error=false)=>{$('reflowStatus').textContent=text;$('reflowStatus').classList.toggle('error',error);};
 const api=()=>globalThis.coexLayerLayout;
+const pictureFitOptions=()=>({includeWholePictures:$('fitWholePictures').checked});
 function updateOutsideReferenceNotice(state){
  const candidates=state?.objects.filter(o=>o.visible!==false&&o.__outsideTrialVisible&&o.trialOutsideRestore)||[];
  const held=candidates.some(o=>!hasTrustedOutsideReference(o.canvas));
@@ -305,7 +306,7 @@ function resizePreservingLayout(width,height,{preset=null,reason=''}={}){
  const previous=capture(state),base=baseFor(state),keepLock=$('lockBtn').getAttribute('aria-checked')==='true';
  composing=true;
  try{
-  restore(base);const result=resizeBackgroundOnly({...state,width:base.width,height:base.height},width,height);exposeOutsideTrial(state);
+  restore(base);const result=resizeBackgroundOnly({...state,width:base.width,height:base.height},width,height,pictureFitOptions());exposeOutsideTrial(state);
   lastAutomaticDecision=result;globalThis.coexBackgroundOnlyResult=result;
   const next=api().commit(width,height,{epoch:state.epoch,revision:state.revision,apply:true});
   globalThis.setLock?.(keepLock);undo={...previous,afterRevision:next.revision};lastRevision=next.revision;lastLayoutEngine='background-only-v1';$('reflowUndo').disabled=false;
@@ -380,8 +381,8 @@ async function resizeEditorAtomic(width,height,{preset=null}={}){
  globalThis.coexGridPreflight={baseIsCurrent,count:expanded.length,base:[base.width,base.height],scene:[state.width,state.height]};if(baseIsCurrent&&expanded.length===1){try{const under=partitionBackground(state).backgrounds.map(x=>x.object);recovered=await verifyExpandedGrid({state,object:expanded[0],permittedUnderlays:under,makeCanvas:(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;},decode:decodeCompositeTrial,isCurrent:()=>current()&&!!api()?.matchesAtomicLiveGuard?.(liveGuard)});}catch{}if(!current())return false;if(!api()?.matchesAtomicLiveGuard?.(liveGuard)){restoreInputs();tell('요소가 변경되어 규격 적용을 중지했습니다.',true);return false;}}
  globalThis.coexGridPreflight.recovered=!!recovered;composing=true;
  try{restore(base);const before={...state,width:base.width,height:base.height};if(recovered){const o=recovered.object;if(o.getElement?.()!==recovered.oldEl||o.getSrc?.()!==recovered.oldSrc)throw Error('격자 원본이 변경되어 변환을 중지했습니다.');o.setElement(recovered.raw);o.set({...recovered.original,gridExpansion:undefined});o.set('gridSourceProvenance',createRecoveredGridSourceProvenance(before,o,recovered.frame));o.setCoords();}
-  const reviewed=new Map(state.objects.filter(o=>validGridSourceProvenance(before,o)).map(o=>[o,{...o.gridSourceProvenance.frame}]));result=resizeBackgroundOnly(before,width,height);exposeOutsideTrial(state);plan=makeCompositeTrial(state,result,base,width,height,reviewed);
-  if(recovered&&(!plan||plan.object!==recovered.object)){restore(base);result=resizeBackgroundOnly(before,width,height);exposeOutsideTrial(state);plan=null;result.status='review';result.reason+=' 기존 격자는 원본을 유지했습니다. 새 규격의 연결을 확인하세요.';}else if(expanded.length&&!recovered&&baseIsCurrent){result.status='review';result.reason+=' 기존 격자는 원본을 유지했습니다. 새 규격의 연결을 확인하세요.';}
+  const reviewed=new Map(state.objects.filter(o=>validGridSourceProvenance(before,o)).map(o=>[o,{...o.gridSourceProvenance.frame}]));result=resizeBackgroundOnly(before,width,height,pictureFitOptions());exposeOutsideTrial(state);plan=makeCompositeTrial(state,result,base,width,height,reviewed);
+  if(recovered&&(!plan||plan.object!==recovered.object)){restore(base);result=resizeBackgroundOnly(before,width,height,pictureFitOptions());exposeOutsideTrial(state);plan=null;result.status='review';result.reason+=' 기존 격자는 원본을 유지했습니다. 새 규격의 연결을 확인하세요.';}else if(expanded.length&&!recovered&&baseIsCurrent){result.status='review';result.reason+=' 기존 격자는 원본을 유지했습니다. 새 규격의 연결을 확인하세요.';}
   target=capture({...state,width,height});}
  catch(error){restoreInputs();tell(error.message,true);return false;}finally{restore(previous);api()?.refresh();composing=false;}
  try{
@@ -455,12 +456,12 @@ globalThis.scheduleRender=function(...args){
  return rasterSchedule(...args);
 };
 // An explicit background choice also refreshes an already-sized linked scene.
-for(const id of ['extendSourceBackground','transparentBg','resizeBehavior'])$(id)?.addEventListener('change',()=>{
+for(const id of ['extendSourceBackground','transparentBg','resizeBehavior','fitWholePictures'])$(id)?.addEventListener('change',()=>{
  const state=api()?.read(),w=Number($('wInput').value),h=Number($('hInput').value);
  if(!composing&&trustedEditorState(state)&&validLayoutSize(w,h))void resizeEditorAtomic(w,h);
 });
 const rasterSettings=globalThis.readCompositionSettings;
-globalThis.readCompositionSettings=function(){const settings=rasterSettings(),state=api()?.read();if(state?.linked&&sceneMatchesSource(state,globalThis.getLayerAnalysisSource?.()))settings.layout={engine:lastLayoutEngine,solver:solverInfo.name,solverVersion:solverInfo.version,rules:solverInfo.rules,sourceWidth:baseline?.width||state.width,sourceHeight:baseline?.height||state.height};return settings;};
+globalThis.readCompositionSettings=function(){const settings=rasterSettings(),state=api()?.read();if(state?.linked&&sceneMatchesSource(state,globalThis.getLayerAnalysisSource?.()))settings.layout={pictureFit:$('fitWholePictures').checked?'whole-source':'original-frame',engine:lastLayoutEngine,solver:solverInfo.name,solverVersion:solverInfo.version,rules:solverInfo.rules,sourceWidth:baseline?.width||state.width,sourceHeight:baseline?.height||state.height};return settings;};
 globalThis.getAutomaticSceneDecision=(source,w,h)=>{
  const state=api()?.read();if(!sceneMatchesSource(state,globalThis.getLayerAnalysisSource?.())||!globalThis.isLayerOutputSource?.(source)||state.width!==w||state.height!==h)return null;
  if(lastAutomaticDecision&&lastAutomaticDecision.sourceEpoch===state.epoch&&lastAutomaticDecision.width===w&&lastAutomaticDecision.height===h)return lastAutomaticDecision;
@@ -470,16 +471,16 @@ globalThis.encodeTarget=async function(source,p,settings){
  const policy=globalThis.coexAutoResizePolicy,state=api()?.read(),sourceInfo=globalThis.getLayerAnalysisSource?.(),origin=policy.origin(source),alias=policy.alias(source);
  if(!sceneMatchesSource(state,sourceInfo)||!globalThis.isLayerOutputSource?.(origin))return originalEncode(source,p,{...settings,mode:'auto'});
  if(alias&&(alias.epoch!==state.epoch||alias.revision!==state.revision))throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
- const guard=api()?.captureAtomicLiveGuard?.();
+ const fitWholePictures=$('fitWholePictures').checked,guard=api()?.captureAtomicLiveGuard?.();
  if(!guard)throw Error('요소 이동이나 편집을 마친 뒤 일괄 변환해 주세요.');
- const current=()=>{const live=api()?.read(),info=globalThis.getLayerAnalysisSource?.();return !!live&&live.epoch===state.epoch&&live.revision===state.revision&&live.sceneOutputKey===state.sceneOutputKey&&sceneMatchesSource(live,info)&&!!globalThis.isLayerOutputSource?.(origin)&&!!api()?.matchesAtomicLiveGuard?.(guard);};
+ const current=()=>{const live=api()?.read(),info=globalThis.getLayerAnalysisSource?.();return $('fitWholePictures').checked===fitWholePictures&&!!live&&live.epoch===state.epoch&&live.revision===state.revision&&live.sceneOutputKey===state.sceneOutputKey&&sceneMatchesSource(live,info)&&!!globalThis.isLayerOutputSource?.(origin)&&!!api()?.matchesAtomicLiveGuard?.(guard);};
  const outsideCurrent=await preloadOutsideTrial(state,current);
  if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
  const original=capture(state),base=baseFor(state),diagnostics={plan:globalThis.coexLastLayoutPlan,candidates:globalThis.coexLayoutCandidates,failure:globalThis.coexLayoutFailure};let image,decision;
  try{
   // No await while the live scene temporarily has target geometry.
   const wasComposing=composing;composing=true;
-  try{restore(base);const sourceState={...state,width:base.width,height:base.height};decision=resizeBackgroundOnly(sourceState,p.w,p.h);exposeOutsideTrial(state);image=api().snapshot(p.w,p.h);policy.record(image,decision);}
+  try{restore(base);const sourceState={...state,width:base.width,height:base.height};decision=resizeBackgroundOnly(sourceState,p.w,p.h,{includeWholePictures:fitWholePictures});exposeOutsideTrial(state);image=api().snapshot(p.w,p.h);policy.record(image,decision);}
   finally{try{restore(original);api().refresh();globalThis.coexLastLayoutPlan=diagnostics.plan;globalThis.coexLayoutCandidates=diagnostics.candidates;globalThis.coexLayoutFailure=diagnostics.failure;}finally{composing=wasComposing;}}
   if(!current()||!outsideCurrent())throw Error('편집 내용이 바뀌어 일괄 변환을 중단했습니다.');
   const blob=await originalEncode(image,p,{...settings,mode:'auto'});
@@ -529,6 +530,7 @@ const timer=setInterval(()=>{
 },250);
 // A manual size replaces a preset queued while OCR or native import is pending.
 for(const id of ['wInput','hInput'])$(id).addEventListener('input',()=>{queued=null;atomicResizeSerial++;clearTimeout(sizeTimer);},{capture:true});
+$('fitWholePictures').addEventListener('change',()=>{queued=null;atomicResizeSerial++;clearTimeout(sizeTimer);},{capture:true});
 window.addEventListener('coex:layer-source',()=>{queued=null;atomicResizeSerial++;clearTimeout(sizeTimer);});
 window.addEventListener('coex:layer-edit',()=>{
  const source=globalThis.getLayerAnalysisSource?.(),state=api()?.read();

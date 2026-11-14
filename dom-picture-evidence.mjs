@@ -11,11 +11,12 @@ export function simpleSvgOnly(xml,parse=(v)=>new DOMParser().parseFromString(v,'
  let doc;try{doc=parse(xml)}catch{return false}
  if(doc.documentElement?.localName!=='svg'||doc.querySelector('parsererror'))return false;
  const tags=new Set(['svg','g','path','rect','circle','ellipse','line','polyline','polygon','defs']);
- const attrs=new Set(['xmlns','xmlns:xlink','viewbox','width','height','x','y','cx','cy','r','rx','ry','d','points','x1','y1','x2','y2','fill','fill-rule','stroke','stroke-width','stroke-linecap','stroke-linejoin','stroke-miterlimit','stroke-dasharray','stroke-dashoffset','opacity','fill-opacity','stroke-opacity','transform','id','preserveaspectratio','style']);
+ const attrs=new Set(['version','xmlns','xmlns:xlink','viewbox','width','height','x','y','cx','cy','r','rx','ry','d','points','x1','y1','x2','y2','fill','fill-rule','stroke','stroke-width','stroke-linecap','stroke-linejoin','stroke-miterlimit','stroke-dasharray','stroke-dashoffset','opacity','fill-opacity','stroke-opacity','transform','id','preserveaspectratio','style']);
  let count=0;
  for(const el of [doc.documentElement,...doc.documentElement.querySelectorAll('*')]){
   if(++count>2000||!tags.has(el.localName)||el.namespaceURI!=='http://www.w3.org/2000/svg')return false;
   for(const a of el.attributes){const name=a.name.toLowerCase(),value=a.value;
+   if(name==='version'&&(el!==doc.documentElement||!['1.0','1.1'].includes(value)))return false;
    if(!attrs.has(name)||name.startsWith('on')||name==='href'||name.endsWith(':href')||name==='src'||/\\|\/\*|\*\/|url\s*\(|@import|expression\s*\(|javascript:|data:/i.test(value))return false;
    if(name==='style'&&!/^(?:(?:\s*(?:overflow|position)\s*:\s*(?:visible|hidden|absolute|relative|static)\s*;?\s*)*)$/i.test(value))return false;
   }
