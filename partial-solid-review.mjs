@@ -5,5 +5,5 @@ export function partialConnectionReview(state){
   potential ||= (Math.abs(b.left)<=t&&Math.abs(b.left+b.width-w)<=t&&b.height>=h*.08&&b.height<=h*.45)||(Math.abs(b.top)<=t&&Math.abs(b.top+b.height-h)<=t&&b.width>=w*.08&&b.width<=w*.45);
   if(o.layerLocked||o.gridSourceUserEdited)edited ||= (b.width>=w*.4&&b.height>=h*.08&&b.height<=h*.45)||(b.height>=h*.4&&b.width>=w*.08&&b.width<=w*.45);
  }
- return {potential,edited,review:potential||edited,reason:edited?' 직접 편집하거나 잠근 요소는 자동 연결을 보류했습니다. 해당 영역을 확인하세요.':potential?' 독립 영역의 연결 여부는 확인이 필요합니다.':''};
+ return {potential,edited,review:potential||edited,reason:edited?' 직접 편집하거나 잠근 요소는 자동 연결을 보류했습니다. 해당 영역을 확인하세요.':potential?' 배경으로 확인되지 않은 부분 영역은 원본 형태를 유지했습니다. 새 여백과 경계를 확인하세요.':''};
 }

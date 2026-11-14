@@ -1,5 +1,5 @@
 {
-  "release": "protected-background-20261018-2",
+  "release": "source-safety-20261114",
   "features": [
     "yoga",
     "workspace-controls",
@@ -20,6 +20,9 @@
     "automatic-size-candidates",
     "protected-background",
     "local-photo-candidates",
-    "ui-theme"
+    "ui-theme",
+    "ambiguous-bitmap-protection",
+    "trusted-outside-overlay-only",
+    "explicit-partial-background-evidence"
   ]
 }

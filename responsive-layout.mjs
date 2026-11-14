@@ -1,6 +1,7 @@
 import {inspectGridCandidate} from './grid-pattern.mjs';
 import {createGridSourceProvenance,createRecoveredGridSourceProvenance,validGridSourceProvenance} from './grid-source.mjs';
 import {encodeCompositeGrid,applyCompositeGrid,verifyExpandedGrid} from './grid-composite.mjs';
+import {installOutsideRenderGuard} from './outside-render-guard.mjs';
 import {mountOutsideStatus} from './outside-status.mjs';
 import {registerTrustedOutsideReference,hasTrustedOutsideReference} from './final-outside-overlay.mjs';
 import {promoteNativeUnderlay} from './native-underlay.mjs';
@@ -50,11 +51,9 @@ const tell=(text,error=false)=>{$('reflowStatus').textContent=text;$('reflowStat
 const api=()=>globalThis.coexLayerLayout;
 function updateOutsideReferenceNotice(state){
  const candidates=state?.objects.filter(o=>o.visible!==false&&o.__outsideTrialVisible&&o.trialOutsideRestore)||[];
- const legacy=candidates.some(o=>o.__outsideLegacy===true);
- const held=candidates.some(o=>!hasTrustedOutsideReference(o.canvas)&&o.__outsideLegacy!==true);
- outsideReferenceNotice.hidden=!legacy&&!held;
- if(legacy)outsideReferenceNotice.textContent='원본 기준 영역을 확인하지 못해 기존 방식으로 바깥 연결을 시도합니다. 요소를 움직이면 원본 안쪽 보존이 보장되지 않으니 결과를 확인해 주세요.'+(held?' 일부 요소의 연결은 보류되었습니다.':'');
- else if(held)outsideReferenceNotice.textContent='원본 슬라이드의 기준 영역을 확인하지 못해 별·선 등 바깥 연결을 보류했습니다. 기존 요소는 유지됩니다. 저장 파일을 다시 열었거나 실행 취소한 경우 PPTX 원본을 다시 열고 결과를 확인해 주세요.';
+ const held=candidates.some(o=>!hasTrustedOutsideReference(o.canvas));
+ outsideReferenceNotice.hidden=!held;
+ if(held)outsideReferenceNotice.textContent='원본 슬라이드의 기준 영역을 확인하지 못해 별·선 등 바깥 연결을 보류했습니다. 기존 요소는 유지됩니다. 저장 파일을 다시 열었거나 실행 취소한 경우 PPTX 원본을 다시 열고 결과를 확인해 주세요.';
 }
 const nativeText=o=>['text','textbox','itext'].includes(String(o.type).toLowerCase());
 function capture(state){return{epoch:state.epoch,revision:state.revision,width:state.width,height:state.height,objects:state.objects.map(o=>({object:o,imageElement:o.getElement?.(),values:Object.fromEntries(attrs.map(k=>[k,k==='styles'?structuredClone(o[k]):o[k]]))}))};}
@@ -340,27 +339,7 @@ async function preloadOutsideTrial(state,isCurrent=()=>true){
   if(!loaded[i]){o.__outsideReview=true;continue;}
   if(!o.__outsideTrialImage)o.__outsideTrialImage=loaded[i];
  }
- for(const o of state.objects.filter(o=>o.__outsideTrialImage&&!o.__outsideRenderInstalled)){
-  o.__outsideBaseElement=o.getElement?.();o.__outsideBaseSource=o.getSrc?.();
-  // Trusted PPTX scenes use the final composite overlay. For pre-existing
-  // JSON/history scenes without an anchor, retain the previously published
-  // per-object renderer, while exposing its weaker frame guarantee.
-  const render=o._render;o._render=function(ctx){
-   const report=(review,legacy)=>{if(!!this.__outsideReview!==review||!!this.__outsideLegacy!==legacy){this.__outsideReview=review;this.__outsideLegacy=legacy;queueMicrotask(()=>window.dispatchEvent(new Event('coex:outside-recovery-change')));}};
-   if(!this.__outsideTrialVisible||globalThis.coexDisableOutsideTrial){report(false,false);render.call(this,ctx);return;}
-   if(hasTrustedOutsideReference(this.canvas)){if(this.__outsideLegacy)report(false,false);render.call(this,ctx);return;}
-   const m=this.trialOutsideRestore,b=m?.original,p=m?.outer,im=this.__outsideTrialImage;
-   const sourceChanged=!b||!p||!im||!this.__outsideBaseElement||this.getElement?.()!==this.__outsideBaseElement||this.getSrc?.()!==this.__outsideBaseSource||this.width!==b.width||this.height!==b.height||(this.cropX??0)!==b.cropX||(this.cropY??0)!==b.cropY||(im.currentSrc||im.src)!==p.src;
-   const unsupported=this.group||this.clipPath||this.shadow||this.filters?.length||(this.globalCompositeOperation&&this.globalCompositeOperation!=='source-over')||this.originX!=='left'||this.originY!=='top';
-   if(sourceChanged||unsupported||!b.scaleX||!b.scaleY){report(true,false);render.call(this,ctx);return;}
-   const x=(p.left-b.left)/b.scaleX-this.width/2,y=(p.top-b.top)/b.scaleY-this.height/2;
-   const slideX=-b.left/b.scaleX-this.width/2,slideY=-b.top/b.scaleY-this.height/2,tr=ctx.getTransform();
-   if(Math.abs(tr.b)>=1e-8||Math.abs(tr.c)>=1e-8||tr.a<=0||tr.d<=0||ctx.canvas.width*ctx.canvas.height>24000000){report(true,false);render.call(this,ctx);return;}
-   const left=Math.ceil(tr.e+tr.a*slideX-.5),top=Math.ceil(tr.f+tr.d*slideY-.5),right=Math.ceil(tr.e+tr.a*(slideX+m.slide.width/b.scaleX)-.5),bottom=Math.ceil(tr.f+tr.d*(slideY+m.slide.height/b.scaleY)-.5);
-   let ok=false;ctx.save();try{ctx.setTransform(1,0,0,1,0,0);ctx.beginPath();ctx.rect(-100000,-100000,200000,200000);ctx.rect(left,top,right-left,bottom-top);ctx.clip('evenodd');ctx.setTransform(tr);ctx.drawImage(im,x,y,p.width,p.height);ok=true;}catch{}finally{ctx.restore();}
-   report(!ok,ok);render.call(this,ctx);
-  };o.__outsideRenderInstalled=true;
- }
+ for(const o of state.objects.filter(o=>o.__outsideTrialImage&&!o.__outsideRenderInstalled))installOutsideRenderGuard(o);
  return ()=>records.every(same);
 }
 globalThis.coexInstallOutsideTrialForObjects=preloadOutsideTrial;

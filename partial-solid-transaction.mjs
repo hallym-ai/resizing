@@ -4,8 +4,6 @@ const dimensions=o=>({x:o.left,y:o.top,w:o.width*o.scaleX,h:o.height*o.scaleY});
 // Advisory change detection only; not a cryptographic signature. Every field
 // and the full image still goes through the independent safety checks below.
 function sourceKey(src){if(typeof src!=='string'||src.length>20_000_000)return null;let a=2166136261,b=2246822519;for(let i=0;i<src.length;i++){let c=src.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b^c,3266489917);}return src.length+':'+(a>>>0).toString(16)+':'+(b>>>0).toString(16);}
-function geometry(o){return Object.fromEntries(['left','top','width','height','scaleX','scaleY'].map(k=>[k,o[k]]));}
-function validReopenedEvidence(state,o){const p=o.partialSolidProvenance,g=p?.geometry,key=sourceKey(o.getSrc?.());return !!p&&p.version===1&&p.sourceKey===key&&!!key&&p.frame?.width===state.width&&p.frame?.height===state.height&&g&&Object.keys(geometry(o)).every(k=>near(g[k],o[k]))&&o.gridSourceUserEdited!==true&&!o.layerLocked;}
 const geomEqual=(a,b)=>['x','y','w','h'].every(k=>near(a[k],b[k]));
 const stable=o=>!!o&&['rect','image'].includes(String(o.type).toLowerCase())&&o.originX==='left'&&o.originY==='top'&&o.visible!==false&&!o.layerLocked&&!o.userEdited&&!o.gridSourceUserEdited&&!o.group&&!o.clipPath&&!o.shadow&&!o.filters?.length&&!o.angle&&!o.skewX&&!o.skewY&&!o.flipX&&!o.flipY&&!o.cropX&&!o.cropY&&!(o.rx||o.ry)&&!(o.stroke&&o.strokeWidth)&&!o.text&&!o.sourceText&&(o.opacity??1)===1&&(!o.globalCompositeOperation||o.globalCompositeOperation==='source-over')&&(String(o.type).toLowerCase()==='image'||/^#[0-9a-f]{6}$/i.test(o.fill||''))&&[o.left,o.top,o.width,o.height,o.scaleX,o.scaleY].every(Number.isFinite)&&o.width>0&&o.height>0&&o.scaleX>0&&o.scaleY>0;
 // Trust is session-local. An importer or explicit user action must issue the
@@ -24,7 +22,7 @@ function imageEvidence(o,budget){
 }
 function sameImage(o,e){return e?.kind==='rect'?String(o.type).toLowerCase()==='rect':e?.kind==='image'&&String(o.type).toLowerCase()==='image'&&o.getElement?.()===e.el&&o.getSrc?.()===e.src&&(e.el.currentSrc||e.el.src)===e.src&&e.el.complete&&o.width===e.el.naturalWidth&&o.height===e.el.naturalHeight;}
 export function registerIndependentRegion(state,o,evidence,budget={remaining:8_000_000}){
- if(!state?.objects?.includes(o)||!stable(o)||evidence?.independent!==true||!['import-source','user-confirmed','independent-pptx-review'].includes(evidence.kind)||evidence.object!==o||evidence.epoch!==state.epoch)return false;
+ if(!state?.objects?.includes(o)||!stable(o)||evidence?.independent!==true||!['import-source','user-confirmed'].includes(evidence.kind)||evidence.object!==o||evidence.epoch!==state.epoch)return false;
  const image=imageEvidence(o,budget);if(!image)return false;capabilities.set(o,{epoch:state.epoch,fill:o.fill,image});return true;
 }
 export function revokeIndependentRegion(o){capabilities.delete(o);}
@@ -67,24 +65,8 @@ export function applyPartialSolid(state,plan){
 
 
 
-// Conservative automatic inference for initial, unedited independent PPTX
-// pictures only. A uniformly coloured picture can still have semantic meaning;
-// this produces a REVIEW candidate, not a proof of artistic intent.
-export function inferInitialPptxSolid(state,o,budget={remaining:8_000_000}){
- if(!['pptx','json'].includes(state?.sourceFormat)||state.inputKind!=='layered'||String(o?.type).toLowerCase()!=='image'||o.layerRoleInferred!==true||o.layerRole!=='subject'||o.sourceElementType!=='picture'||o.cutoutMethod!=='pptx-original-object'||!/^slide:\d+$/.test(o.sourceElementId||'')||o.layoutManualRole||o.layoutManualGroup||o.gridSourceUserEdited||o.sourceImageFill||o.gridExpansion||o.gridSourceProvenance||o.textureBackgroundFrame||!stable(o))return false;
- if(state.sourceFormat==='json'&&!validReopenedEvidence(state,o))return false;
- const b=dimensions(o),w=state.width,h=state.height,t=Math.max(1,Math.min(w,h)*.002),left=Math.abs(b.x)<=t,right=Math.abs(b.x+b.w-w)<=t,top=Math.abs(b.y)<=t,bottom=Math.abs(b.y+b.h-h)<=t;
- if(![w,h].every(v=>Number.isFinite(v)&&v>0)||b.x< -t||b.y< -t||b.x+b.w>w+t||b.y+b.h>h+t)return false;
- const horizontal=left&&right&&b.h>=h*.08&&b.h<=h*.45,vertical=top&&bottom&&b.w>=w*.08&&b.w<=w*.45;
- if(!horizontal&&!vertical)return false;
- // Require an independently drawn later foreground; no flattened poster can pass.
- const i=state.objects.indexOf(o);if(i<0||!state.objects.slice(i+1).some(x=>x.visible!==false&&(typeof x.text==='string'||x.sourceElementType==='picture')&&x.sourceElementId))return false;
- return registerIndependentRegion(state,o,{object:o,independent:true,epoch:state.epoch,kind:'independent-pptx-review'},budget);
-}
-
-
-
-
-
-
-
+// Compatibility entry point: shape, solid pixels and serialized provenance
+// cannot establish whether an independent picture is a background or artwork.
+// Only registerIndependentRegion with separately established semantic evidence
+// can grant a session-local capability. Reopened metadata grants none.
+export function inferInitialPptxSolid(){return false;}
