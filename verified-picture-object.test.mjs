@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
 import {verifiedPictureObject} from './verified-picture-object.mjs';
-import {resizeBackgroundOnly} from './background-only.mjs';
+import {resizeBackgroundOnly,trustedOutsideFitBoxes} from './background-only.mjs';
 import {simpleSvgEquivalent} from './ooxml-picture-provenance.mjs';
 import {simpleSvgOnly} from './dom-picture-evidence.mjs';
 
 const url='data:image/png;base64,d2hvbGU=',base={x:-10,y:20,width:24,height:24,rotation:0,opacity:.52,flipH:false,flipV:false,crop:null,group:false,effects:[]};
+const candidates=[{id:'slide:1',left:-30,top:0,width:40,height:4},{id:'slide:2',left:120,top:0,width:40,height:4}];
+const items=[{sourceElementId:'slide:1',verified:true},{sourceElementId:'slide:2',verified:false}];
+assert.deepEqual(trustedOutsideFitBoxes(candidates,items,o=>o.verified),[candidates[0]]);
+assert.deepEqual(trustedOutsideFitBoxes(candidates,[...items,{sourceElementId:'slide:1',verified:true}],o=>o.verified),[],'duplicate source ID cannot authorize outside fit');
 function make(g=base,changes={}){
  const source={status:'source-verified',opacity:g.opacity,groups:[],geometry:{...g,x:g.x*9525,y:g.y*9525,width:g.width*9525,height:g.height*9525}};
  return {source,geometry:g,mediaDataUrl:url,width:48,height:48,W:100,H:140,slideWidth:100,slideHeight:140,info:{id:'slide:7',name:'Star'},...changes};
@@ -33,6 +37,13 @@ for(const includeWholePictures of [true,false])for(const [width,height] of [[108
  }
  assert.equal(plate.width,width);assert.equal(plate.height,height);assert.equal(plate.left,0);assert.equal(plate.top,0);
 }
+globalThis.coexGetOutsideRecoveryReport=()=>({records:[{candidate:false}],omitted:0});
+{
+ const plate=live({type:'rect',originX:'left',originY:'top',left:0,top:0,width:100,height:140,fill:'#e25744',layerRole:'background'});
+ const s={F,sourceFormat:'pptx',inputKind:'layered',width:100,height:140,epoch:1,revision:0,objects:[plate]};
+ const r=resizeBackgroundOnly(s,1080,1080,{includeWholePictures:true});assert.equal(r.status,'review');assert.match(r.reason,/원본 전체를 확인하지 못한 바깥 장식/);
+}
+delete globalThis.coexGetOutsideRecoveryReport;
 // A static SVG root version is allowed; it never admits arbitrary versions,
 // nested version attributes, scripts, hrefs or a changed source structure.
 const NS='http://www.w3.org/2000/svg',bytes=new TextEncoder().encode('<svg/>');

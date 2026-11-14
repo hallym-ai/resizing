@@ -1,5 +1,5 @@
 {
-  "release": "whole-picture-20261114",
+  "release": "fallback-fit-20261114",
   "features": [
     "yoga",
     "workspace-controls",
@@ -29,6 +29,8 @@
     "source-object-coverage",
     "verified-whole-picture-import",
     "off-slide-source-pictures",
-    "single-pass-picture-opacity"
+    "single-pass-picture-opacity",
+    "trusted-outside-patch-fit",
+    "unresolved-outside-warning"
   ]
 }

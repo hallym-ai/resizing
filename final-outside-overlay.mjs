@@ -24,6 +24,7 @@ function anchorFrame(r){
  return finite(frame.x,frame.y,frame.w,frame.h)&&frame.w>0&&frame.h>0?frame:null;
 }
 export function hasTrustedOutsideReference(canvas){const r=canvas&&sessions.get(canvas);return !!r&&anchorValid(r);}
+export function hasTrustedOutsideCandidate(o){const r=o?.canvas&&sessions.get(o.canvas);return !!r&&anchorValid(r)&&!!candidate(o,r);}
 function release(r){
  if(!r||r.revoked)return;r.revoked=true;
  if(sessions.get(r.canvas)===r)sessions.delete(r.canvas);
