@@ -40,7 +40,7 @@ const layoutSelections=new Map();
 let candidateContext='';
 let lastLayoutEngine='preserved-source-layout';let lastAutomaticDecision=null;
 let baseline=null,undo=null,lastRevision=-1,queued=null,composing=false,sizeTimer=null;
-const attrs=['nativeBitmapProvenance','gridSourceUserEdited','gridSourceProvenance','gridExpansion','__outsideTrialVisible','objectCaching','textureBackgroundFrame','left','top','scaleX','scaleY','angle','originX','originY','flipX','flipY','width','height','fontSize','textAlign','textBackgroundColor','readabilityPanelBox','layerRole','styles','splitByGrapheme','lineHeight','direction','radius','strokeWidth','rx','ry','visible','layoutOverlapBasis','layoutGraphSource'];
+const attrs=['partialSolidProvenance','nativeBitmapProvenance','gridSourceUserEdited','gridSourceProvenance','gridExpansion','__outsideTrialVisible','objectCaching','textureBackgroundFrame','left','top','scaleX','scaleY','angle','originX','originY','flipX','flipY','width','height','fontSize','textAlign','textBackgroundColor','readabilityPanelBox','layerRole','styles','splitByGrapheme','lineHeight','direction','radius','strokeWidth','rx','ry','visible','layoutOverlapBasis','layoutGraphSource'];
 const tell=(text,error=false)=>{$('reflowStatus').textContent=text;$('reflowStatus').classList.toggle('error',error);};
 const api=()=>globalThis.coexLayerLayout;
 const nativeText=o=>['text','textbox','itext'].includes(String(o.type).toLowerCase());
@@ -502,6 +502,3 @@ export function composePreservedDesign(state,width,height){
  const fit=preserveObjects(state,width,height,{allowUpscale:true});
  return {engine:'preserved-source-layout',candidate:'preserved-source',width,height,warnings:[],...fit};
 }
-
-
-
