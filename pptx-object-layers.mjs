@@ -1,3 +1,4 @@
+import {sourceObjectCoverage,slideSourceObjectIds} from './source-background-separation.mjs';
 import {sourceDigest} from './outside-recovery.mjs';
 import {nativeText,nativeShape} from './pptx-native-elements.mjs';
 import {readSimplePicture} from './dom-picture-evidence.mjs';
@@ -62,6 +63,7 @@ export async function extractPptxObjects(root,original,{width,height,pixelRatio,
  const slideSolidExact=!!slideSolid&&captureMatchesSlideSolid(background,slideSolid);
  if(slideSolidExact)objects.push({type:'Rect',version:'7.4.0',originX:'left',originY:'top',left:0,top:0,width:W,height:H,scaleX:1,scaleY:1,fill:slideSolid,stroke:null,strokeWidth:0,opacity:1,visible:true,layerName:'PPTX 슬라이드 배경','layerRole':'background',layerLocked:true,sourceText:''});
  else objects.push(image(background.toDataURL('image/png'),W,H,0,0,'PPTX 슬라이드 배경','background','',true));
+ Object.assign(objects[0],{cutoutMethod:'pptx-slide-background',sourceElementType:'slide-background'});
  background.width=background.height=0;
  for(let i=0;i<nodes.length;i++){
   stale(signal);const {el,info,excludeText}=nodes[i],ancestors=new Set();let p=el;while(p&&p!==root){ancestors.add(p);p=p.parentElement;}
@@ -133,8 +135,11 @@ export async function extractPptxObjects(root,original,{width,height,pixelRatio,
  if(empty)warnings.push(`화면에 보이지 않는 객체 ${empty}개는 제외했습니다.`);
  const editableTextCount=objects.filter(o=>o.nativeKind==='text').length,vectorCount=objects.filter(o=>o.nativeKind==='vector').length;
  warnings.push(`편집 글자 ${editableTextCount}개 · 벡터 도형 ${vectorCount}개. 표·차트와 지원하지 않는 복잡한 효과는 원본 객체 이미지로 보존합니다. 원본 글꼴이 없으면 대체 글꼴로 표시될 수 있습니다.`);
+ const sourceIds=slideSourceObjectIds(provenance?.slideXml);
+ const backgroundSeparation={version:1,backgroundColor:slideSolidExact?slideSolid:null,backgroundKind:slideSolidExact?'explicit-solid':'captured-slide-background',coverageBasis:sourceIds?'slide-xml':'renderer-nodes',...sourceObjectCoverage(nodes,objects,sourceIds)};
+ if(backgroundSeparation.missing.length)warnings.push(`원본 객체 ${backgroundSeparation.missing.length}개는 화면 밖이거나 표시 자료가 없어 분리 목록에서 확인이 필요합니다.`);
  const ref=image(original.toDataURL('image/png'),W,H,0,0,'PPTX 원본 비교용 · 숨김','background','',true);ref.visible=false;objects.unshift(ref);
  const recoveryRecords=outsideProbe.records.slice(0,200).map((r,i)=>({id:String(r.id||`unknown:${i}`).slice(0,120),name:String(r.name||'요소').slice(0,170),candidate:!!r.stored,reason:r.stored?'':r.mergeReason==='off-slide-only-not-retained'?'off-slide':r.reason==='candidate-limit-review'?'limit':r.mergeReason==='ambiguous-edge-strip'?'ambiguous':r.reason?'unsupported':'other'}));
  const outsideRecoveryReport=recoveryRecords.length?{version:1,records:recoveryRecords,omitted:Math.max(0,outsideProbe.records.length-200)}:null;
- return{format:'coex-layer-project',version:objects.some(o=>o.outsideRecovery)||outsideRecoveryReport?2:1,...(outsideRecoveryReport?{outsideRecoveryReport}:{}),width:W,height:H,analysis:{engine:'pptx-original-objects',mediaCoverage,directPictureCount,slideSolid:slideSolidExact,workingPixelRatio:captureRatio,sourcePixelRatio:pixelRatio,objectCount:objects.length-2,textCount,pictureCount,editableTextCount,vectorCount,warnings},scene:{version:'7.4.0',objects}};
+ return{format:'coex-layer-project',version:objects.some(o=>o.outsideRecovery)||outsideRecoveryReport?2:1,...(outsideRecoveryReport?{outsideRecoveryReport}:{}),width:W,height:H,analysis:{engine:'pptx-original-objects',backgroundSeparation,mediaCoverage,directPictureCount,slideSolid:slideSolidExact,workingPixelRatio:captureRatio,sourcePixelRatio:pixelRatio,objectCount:objects.length-2,textCount,pictureCount,editableTextCount,vectorCount,warnings},scene:{version:'7.4.0',objects}};
 }

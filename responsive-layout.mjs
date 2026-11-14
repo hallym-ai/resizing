@@ -1,12 +1,12 @@
+import {sourceBackgroundParts,withSeparationVisibility} from './source-background-separation.mjs';
 import {inspectGridCandidate} from './grid-pattern.mjs';
 import {createGridSourceProvenance,createRecoveredGridSourceProvenance,validGridSourceProvenance} from './grid-source.mjs';
 import {encodeCompositeGrid,applyCompositeGrid,verifyExpandedGrid} from './grid-composite.mjs';
 import {installOutsideRenderGuard} from './outside-render-guard.mjs';
 import {mountOutsideStatus} from './outside-status.mjs';
 import {registerTrustedOutsideReference,hasTrustedOutsideReference} from './final-outside-overlay.mjs';
-import {promoteNativeUnderlay} from './native-underlay.mjs';
 import './main-raster-background.mjs';
-import {partitionBackground,resizeBackgroundOnly,separationPreviews,trackNativeBackgroundFit} from './background-only.mjs';
+import {partitionBackground,resizeBackgroundOnly,separationPreviews} from './background-only.mjs';
 import {setMeasuredPanelBox} from './readability-panels.mjs';
 import {prepareMaterialPanel} from './material-surfaces.mjs';
 import {measureRenderedText} from './render-text-metrics.mjs';
@@ -27,7 +27,7 @@ import {inspectLayout,solverInfo} from './design-layout.mjs';
 import {extendSolidBackground} from './solid-background.mjs';
 const $=id=>document.getElementById(id);
 const controls=document.createElement('section');controls.className='reflow-controls';controls.id='reflowControls';
-controls.innerHTML=`<h3>규격에 맞춰 리사이징</h3><p>글씨·로고·상품·장식의 배치와 비율을 유지하며 전체 크기를 규격에 맞춥니다. 확인된 배경은 새 공간에 연결하므로 결과를 확인해 주세요.</p><div class="reflow-row"><label>출력 규격<select id="reflowRatio"><option value="">자유 크기 · 너비/높이 입력</option><option value="1080x1080">정사각형 · 1080 × 1080</option><option value="1920x1080">가로 · 1920 × 1080</option><option value="1080x1920">세로 · 1080 × 1920</option><option value="1800x600">가로 배너 · 1800 × 600</option></select></label><button class="doc-btn" id="reflowApply">배경만 크기 적용</button><button class="doc-btn" id="reflowUndo" disabled>크기 변경 전으로</button><button id="reflowNext" hidden disabled>다른 배치 적용</button></div><p id="reflowStatus" role="status" aria-live="polite">파일을 넣으면 배경과 보호 요소를 구분합니다.</p><details id="backgroundSeparationDetails"><summary>배경 / 보호할 요소 확인 · 필요할 때 열기</summary><p id="backgroundSeparationStatus" role="status"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><figure style="margin:0"><figcaption>확인된 배경</figcaption><img id="backgroundOnlyPreview" alt="다른 요소를 제외한 배경" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure><figure style="margin:0"><figcaption>보호할 요소 · 상대배치 유지</figcaption><img id="foregroundOnlyPreview" alt="배경과 구분된 보호 요소" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure></div><p>합쳐진 이미지나 분리 근거가 부족한 객체는 보호 요소로 남습니다. 분리 미완료 상태를 성공으로 표시하지 않습니다.</p></details><details><summary>자유 비율 입력</summary><div class="reflow-custom"><label>가로 비율<input id="reflowCustomX" type="number" min="1" max="10000" value="16"></label><span>:</span><label>세로 비율<input id="reflowCustomY" type="number" min="1" max="10000" value="9"></label><button id="reflowCustomApply" class="doc-btn">이 비율로 배경 변경</button></div></details>`;
+controls.innerHTML=`<h3>1단계 · 배경과 전체 요소 분리</h3><p>배경만 있는 화면과 배경을 뺀 전체 요소를 먼저 확인하세요. 이 단계에서는 원본 객체의 위치·크기·겹침을 유지합니다. 규격 변경은 분리 결과를 확인한 뒤 진행하세요.</p><div class="reflow-row"><label>출력 규격<select id="reflowRatio"><option value="">자유 크기 · 너비/높이 입력</option><option value="1080x1080">정사각형 · 1080 × 1080</option><option value="1920x1080">가로 · 1920 × 1080</option><option value="1080x1920">세로 · 1080 × 1920</option><option value="1800x600">가로 배너 · 1800 × 600</option></select></label><button class="doc-btn" id="reflowApply">배경만 크기 적용</button><button class="doc-btn" id="reflowUndo" disabled>크기 변경 전으로</button><button id="reflowNext" hidden disabled>다른 배치 적용</button></div><p id="reflowStatus" role="status" aria-live="polite">파일을 넣으면 배경과 보호 요소를 구분합니다.</p><details id="backgroundSeparationDetails" open><summary>배경과 전체 요소 · 분리 결과</summary><p id="backgroundSeparationStatus" role="status"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><figure style="margin:0"><figcaption>배경만</figcaption><img id="backgroundOnlyPreview" alt="다른 요소를 제외한 배경" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure><figure style="margin:0"><figcaption>배경을 뺀 전체 요소 · 투명 바탕</figcaption><img id="foregroundOnlyPreview" alt="배경과 구분된 보호 요소" style="width:100%;max-height:230px;object-fit:contain;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0/16px 16px"></figure></div><div class="reflow-row"><button type="button" class="doc-btn" id="saveSeparatedBackground" disabled>배경 PNG 저장</button><button type="button" class="doc-btn" id="saveSeparatedElements" disabled>전체 요소 PNG 저장</button></div><p>먼저 원본 슬라이드 배경과 그 위의 전체 요소를 나눕니다. 위치·크기·겹침은 유지하며, 글씨와 그림의 세부 인식은 다음 단계입니다. 그림 안에 합쳐진 배경까지 지운 결과는 아닙니다.</p></details><details><summary>자유 비율 입력</summary><div class="reflow-custom"><label>가로 비율<input id="reflowCustomX" type="number" min="1" max="10000" value="16"></label><span>:</span><label>세로 비율<input id="reflowCustomY" type="number" min="1" max="10000" value="9"></label><button id="reflowCustomApply" class="doc-btn">이 비율로 배경 변경</button></div></details>`;
 $('layerFields').prepend(controls);
 mountOutsideStatus($('reflowStatus'),()=>globalThis.coexGetOutsideRecoveryReport?.()||null,()=>globalThis.coexLayerLayout?.read());
 // Output dimensions have one visible owner. Legacy nodes stay for compatibility.
@@ -293,8 +293,9 @@ function preserveObjects(state,width,height,{allowUpscale=false}={}){
 globalThis.prepareInitialNativeFrame=()=>{
  const state=api()?.read();if(!state)return;
  registerTrustedOutsideReference(state,globalThis.getLayerAnalysisSource?.());
- globalThis.coexNativeUnderlays=promoteNativeUnderlay(state);
- trackNativeBackgroundFit(state,()=>preserveObjects(state,state.width,state.height));api().refresh();
+ // Stage one must not promote partial artwork or fit/move source objects.
+ // Display fitting is handled by the canvas viewport, not object transforms.
+ api().refresh();separationKey='';
  queueMicrotask(()=>window.dispatchEvent(new Event('coex:history-source')));
 };
 function resizePreservingLayout(width,height,{preset=null,reason=''}={}){
@@ -497,10 +498,26 @@ function publishSeparation(){
  if(separationAttemptKey!==key){separationAttemptKey=key;separationAttempts=0;separationRetryAt=0;}
  if(state.fontError||document.fonts.status==='loading'||separationAttempts>=2||performance.now()<separationRetryAt)return;
  separationBusy=true;separationAttempts++;separationRetryAt=performance.now()+1250;
- try{const p=separationPreviews(state,()=>api().snapshotThumbnail(512));$('backgroundOnlyPreview').src=p.background;$('foregroundOnlyPreview').src=p.foreground;
- $('backgroundSeparationStatus').textContent=(p.parts.separated?'배경과 요소를 구분':'배경 분리 미완료')+(p.parts.backgrounds.some(x=>x.textureProfile)?' · 종이·벽돌 질감 배경 추정 · 이음선 검토 필요':'')+(p.parts.backgrounds.some(x=>['pptx-native-bitmap-stretch-review','json-independent-bitmap-stretch-review'].includes(x.evidence))?' · 그림 배경 후보: 포함된 글씨·로고와 왜곡 확인':'')+' · 배경 '+p.parts.backgrounds.length+'개 · 보호 요소 '+p.parts.foreground.length+'개'+(p.parts.unresolved.length?' · 배경 후보 '+p.parts.unresolved.length+'개는 근거 부족으로 보호':'' );separationKey=key;
+ try{const source=globalThis.getLayerAnalysisSource?.(),native=state.sourceFormat==='pptx'&&source?.key===state.sourceKey;const parts=native?sourceBackgroundParts(state):null;const p=separationPreviews(state,()=>api().snapshotThumbnail(512),parts||undefined);$('backgroundOnlyPreview').src=p.background;$('foregroundOnlyPreview').src=p.foreground;
+ const coverage=native?source.nativeProject?.analysis?.backgroundSeparation:null;
+ const colour=coverage?.backgroundColor;
+ $('backgroundSeparationStatus').textContent=(p.parts.separated?'배경과 전체 요소를 별도로 표시합니다.':'배경 분리 확인이 필요합니다.')+(colour?' 배경색 '+colour.toUpperCase()+'.':'')+' 배경 '+p.parts.backgrounds.length+'개 · 요소 레이어 '+p.parts.foreground.length+'개.'+(coverage?' 불러올 때 '+(coverage.coverageBasis==='slide-xml'?'원본 객체 ':'가져오기에서 확인된 객체 ')+coverage.expected+'개 중 '+coverage.retained+'개를 유지했습니다.'+(coverage.missing.length?' 누락/화면 밖 '+coverage.missing.length+'개는 확인이 필요합니다.':''):'')+' 글씨·그림의 세부 분류 및 실제 화면은 아직 검증하지 않았습니다.';
+ $('saveSeparatedBackground').disabled=!native||!p.parts.separated;
+ $('saveSeparatedElements').disabled=!native||!p.parts.separated||!p.parts.foreground.length;
+ separationKey=key;
  }catch(error){$('backgroundSeparationStatus').textContent='분리 미리보기 확인 필요: '+error.message+(separationAttempts>=2?' · 반복 처리를 멈췄습니다. 새 파일이나 규격 변경 후 다시 확인합니다.':'');}finally{separationBusy=false;}
 }
+function saveSeparated(kind){
+ const state=api()?.read(),source=globalThis.getLayerAnalysisSource?.();
+ if(!state||state.sourceFormat!=='pptx'||source?.key!==state.sourceKey)return;
+ const parts=sourceBackgroundParts(state);if(!parts.separated){tell('배경 분리 상태를 먼저 확인하세요.',true);return;}
+ let c;try{c=withSeparationVisibility(state,parts,kind,()=>api().snapshot(state.width,state.height));c.toBlob(blob=>{
+  c.width=c.height=0;if(!blob){tell('분리 PNG를 저장하지 못했습니다.',true);return;}
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(source.name||'PPTX')+(kind==='background'?'_배경.png':'_전체요소.png');a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+ },'image/png');}catch(error){if(c)c.width=c.height=0;tell('분리 PNG 저장 확인 필요: '+error.message,true);}
+}
+$('saveSeparatedBackground').onclick=()=>saveSeparated('background');
+$('saveSeparatedElements').onclick=()=>saveSeparated('foreground');
 const timer=setInterval(()=>{
  if(document.hidden)return;
  publishSeparation();const state=api()?.read();$('reflowApply').disabled=!state;$('reflowUndo').disabled=!state||!matching(undo,state)||state.revision!==undo?.afterRevision;

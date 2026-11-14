@@ -1,3 +1,4 @@
+import {withSeparationVisibility} from './source-background-separation.mjs';
 import {outsideFitBounds,inferOutsideOriginalFrame} from './outside-fit.mjs';
 import {planAnchoredFooter} from './anchored-band.mjs';
 import {partialConnectionReview} from './partial-solid-review.mjs';
@@ -138,10 +139,10 @@ export function resizeBackgroundOnly(state,width,height){
  return {policy:'background-only-v1',sourceEpoch:state.epoch,width,height,inputKind:state.inputKind||'layered',path:'background-only',method:'background-only',status:!parts.separated||parts.unresolved.length||texture||photo||partial.length||__partialReview.review||__outsideFit.skipped.length||__outsideFit.notes.length||__outsideFit.boxes.length?'review':'ready',reason:reason+(partial.length?' 독립 단색 영역을 양 끝에 연결했습니다. 영역 용도와 경계를 확인하세요.':'')+(__partialReview.edited||!partial.length?__partialReview.reason:'')+outsideNotice,backgroundScope:photo?(stretchPhoto?'분리된 배경 사진을 화면에 늘려 맞췄습니다. 배경의 모양과 투명 영역을 확인하세요.':'분리된 배경 사진을 비율을 유지해 화면에 맞췄습니다. 가장자리 잘림과 투명 영역을 확인하세요.'):texture?'분리된 종이·벽돌 배경 질감을 바깥 영역에 반사 연결했습니다. 배경 추정·반복 무늬·이음선 검토 필요; AI 생성 아님':'확인된 단색·벡터 배경만 확장',crop:photo&&!stretchPhoto?'background-cover':'none',stretch:stretchPhoto,rightEdge,foregroundScale:scale,foregroundOffset:{x:x-l*scale,y:y-t*scale},separation:{status:parts.separated?'separated':'unseparated',backgrounds:parts.backgrounds.map(({id,name,evidence,textureProfile})=>({id,name,evidence,textureProfile})),foregroundIds:parts.foreground.map(p=>p.id),unresolved:parts.unresolved}};
 }
 
-export function separationPreviews(state,snapshot){
- const p=partitionBackground(state),visible=state.objects.map(o=>o.visible),result={},canvas=state.objects.find(o=>o.canvas)?.canvas,backdrop=canvas?.backgroundColor;
- if(canvas)canvas.backgroundColor='';
- try{for(const [key,items]of [['background',p.backgrounds],['foreground',p.foreground]]){const set=new Set(items.map(v=>v.object));state.objects.forEach(o=>o.visible=set.has(o));const c=snapshot(state.width,state.height);try{result[key]=c.toDataURL('image/png');}finally{c.width=c.height=0;}}}
- finally{state.objects.forEach((o,i)=>o.visible=visible[i]);if(canvas)canvas.backgroundColor=backdrop;}
- return {parts:p,...result};
+export function separationPreviews(state,snapshot,parts=partitionBackground(state)){
+ const result={};
+ for(const kind of ['background','foreground'])result[kind]=withSeparationVisibility(state,parts,kind,()=>{
+  const c=snapshot(state.width,state.height);try{return c.toDataURL('image/png');}finally{c.width=c.height=0;}
+ });
+ return {parts,...result};
 }

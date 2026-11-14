@@ -1,5 +1,5 @@
 {
-  "release": "source-safety-20261114",
+  "release": "background-first-20261114",
   "features": [
     "yoga",
     "workspace-controls",
@@ -23,6 +23,9 @@
     "ui-theme",
     "ambiguous-bitmap-protection",
     "trusted-outside-overlay-only",
-    "explicit-partial-background-evidence"
+    "explicit-partial-background-evidence",
+    "source-background-first",
+    "transparent-elements-export",
+    "source-object-coverage"
   ]
 }
