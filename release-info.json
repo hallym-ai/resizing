@@ -1,5 +1,5 @@
 {
-  "release": "whole-fit-default-20261114",
+  "release": "preserve-element-positions-20261114",
   "features": [
     "yoga",
     "workspace-controls",
@@ -32,6 +32,7 @@
     "single-pass-picture-opacity",
     "trusted-outside-patch-fit",
     "unresolved-outside-warning",
-    "whole-picture-fit-default"
+    "whole-picture-fit-default",
+    "preserve-foreground-relative-position"
   ]
 }

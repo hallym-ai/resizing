@@ -1,14 +1,11 @@
 import {withSeparationVisibility} from './source-background-separation.mjs';
 import {outsideFitBounds,inferOutsideOriginalFrame} from './outside-fit.mjs';
 import {hasTrustedOutsideCandidate} from './final-outside-overlay.mjs';
-import {planAnchoredFooter} from './anchored-band.mjs';
 import {partialConnectionReview} from './partial-solid-review.mjs';
 import {capturePartialSource,planPartialSolid,applyPartialSolid} from './partial-solid-transaction.mjs';
 import {tightNativeBox} from './family-master.mjs';
-import {captureRightEdge,applyRightEdge} from './right-edge-anchors.mjs';
 import {solidBackgroundColor,extendSolidBackground} from './solid-background.mjs';
 import {masonryTextureProfile,paperTextureProfile,extendPaperTexture,installTextureBackgroundRenderer} from './texture-background.mjs';
-import {captureFooterSource,applyFooterAfterResize} from './band-runtime.mjs';
 
 
 // Runtime evidence only: a verified full-frame native texture may be inset by
@@ -87,11 +84,7 @@ export function resizeBackgroundOnly(state,width,height,{includeWholePictures=tr
  if(state.fontError)throw Error(state.fontError);
  const __partialReview=partialConnectionReview(state);
  // Only explicitly registered semantic evidence may authorize partial extension.
- const __partialProofs=state.objects.map(o=>capturePartialSource(state,o)).filter(Boolean); const parts=partitionBackground(state),edge=captureRightEdge(state,parts);
- const footerSource=parts.separated&&parts.unresolved.length===0?captureFooterSource(state):null;
- const sourceItems=footerSource?.items.map(item=>({...item,outputBox:item.sourceBox}));
- const footerEvidence=sourceItems?planAnchoredFooter({...footerSource,items:sourceItems,targetWidth:state.width,targetHeight:state.height}):null;
- const footerIds=new Set(footerEvidence?[footerEvidence.bandId,...footerEvidence.textMoves.map(m=>m.id)]:[]);
+ const __partialProofs=state.objects.map(o=>capturePartialSource(state,o)).filter(Boolean); const parts=partitionBackground(state);
  let originalFrame=parts.backgrounds.find(p=>p.textureProfile)?.object.textureBackgroundFrame||{x:0,y:0,w:state.width,h:state.height};
  let __outsideFit=outsideFitBounds(state,{foreground:parts.foreground,outputWidth:width,outputHeight:height,frame:originalFrame});
  let hasSavedOutside=state.sourceFormat==='json'&&parts.foreground.some(p=>p.object.visible!==false&&p.object.trialOutsideRestore),outsideFrameFailure=null;
@@ -114,9 +107,9 @@ export function resizeBackgroundOnly(state,width,height,{includeWholePictures=tr
  // Whole source pictures participate in one shared fit when selected. The
  // alternate original-frame mode keeps the former frame placement; trusted
  // outside patches participate only when the whole-picture mode is selected.
- // On a cross-checked saved frame, an already-expanded footer is not part of the
- // original content bounds; the existing footer routine will place it later.
- const boxes=parts.foreground.filter(({id})=>!hasSavedOutside||!footerIds.has(id)).map(boxFor);
+ // Keep every foreground element in the same source-relative layout, including
+ // solid strips and their text, even when a saved frame is recovered.
+ const boxes=parts.foreground.map(boxFor);
  // A source-checked outside patch can extend the shared fit only in the
  // explicitly selected whole-picture mode. JSON metadata alone is not trust.
  if(includeWholePictures)boxes.push(...trustedOutsideFitBoxes(__outsideFit.boxes,state.objects));
@@ -145,9 +138,9 @@ export function resizeBackgroundOnly(state,width,height,{includeWholePictures=tr
   const center=o.getCenterPoint();o.set({scaleX:o.scaleX*scale,scaleY:o.scaleY*scale});
   o.setPositionByOrigin(new state.F.Point(x+(center.x-l)*scale,y+(center.y-t)*scale),'center','center');o.setCoords();
  }
- const rightEdge=applyRightEdge(state,edge,width,height);
- const footerPlan=footerSource?applyFooterAfterResize(footerSource,state,width,height):null;
- globalThis.coexFooterPrototype=footerPlan;
+ // Role inferred from geometry is not permission to move or stretch an item.
+ const rightEdge=null;
+ globalThis.coexFooterPrototype=null;
  const partial=[];for(const proof of __partialProofs){const verified=o=>parts.backgrounds.some(p=>p.object===o&&p.evidence==='verified-full-frame-single-colour');const plan=planPartialSolid(state,proof,{width,height,scale,offset:{x:x-l*scale,y:y-t*scale}},verified);if(plan&&applyPartialSolid(state,plan))partial.push({id:proof.index,oldBox:plan.oldBox,newBox:plan.newBox});}
  globalThis.coexPartialSolidTrial=partial;
  const texture=parts.backgrounds.some(p=>p.textureProfile),photo=parts.backgrounds.some(p=>p.evidence==='separated-photo-cover');
